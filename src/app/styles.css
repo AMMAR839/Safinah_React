@@ -1,0 +1,257 @@
+/* --- Styles for page.js --- */
+
+.main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.1fr;
+    gap: 12px;
+    padding: 12px;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+.gabungan {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+    border: 0.01px solid #039519;
+    position: relative;
+}
+
+.gabungan > * {
+    position: relative;
+    z-index: 1;
+}
+
+.ornamen {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    rotate: 180deg;
+    width: 150px;
+    height: auto;
+    opacity: 0.8;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.mapSection {
+    grid-column: 3;
+    border: 0.01px solid #039519;
+}
+
+.mapSection h2 {
+    font-size: 12px;
+    color: #3b0462;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #04820d;
+}
+
+.map {
+    flex: 1;
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    height: 100%;
+}
+
+.mapControls {
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.tombolLintasan, .tombolRefresh {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    border: none;
+    transition: background 0.3s;
+}
+
+.tombolLintasan { background: #e9ecef; }
+.tombolLintasan.aktif { background: #87dd94; }
+.tombolRefresh { background: #007bff; color: white; }
+
+.gridLabel1 {
+    opacity: 0.5;
+    padding: 3px 0px;
+}
+
+.gridLabel2 {
+    opacity: 0.5;
+    padding: 8px 6px;
+}
+
+.imagesSection {
+    grid-column: 2;
+    font-size: 11px;
+    border: 0.01px solid #039519;
+}
+
+.imagesSection h2 {
+    font-size: 12px;
+    color: #3b0462;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #04820d;
+}
+
+.imagesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    object-fit: contain;
+}
+
+.imageSlot {
+    display: flex;
+    flex-direction: column;
+}
+
+.imageGallery {
+    flex: 1;
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #666;
+    max-width: 100%;
+    max-height: 240px;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+}
+
+.imageGallery img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.dataSection {
+    flex: 0 0 auto;
+    font-size: 11px;
+    box-shadow: #039519 0px 0px 2px;
+}
+
+.dataSection h2 {
+    font-size: 12px;
+    color: #3b0462;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #04820d;
+}
+
+.errorMessage {
+  color: red;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.isiData {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.kotak {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 6px;
+    font-size: 11px;
+    box-shadow: 0px 0px 5px rgba(0,0,0,0.2);
+    border: #8698ab 0.01px solid;
+}
+
+.kotak h3 {
+    font-size: 11px;
+    color: #3b0462;
+    margin-bottom: 3px;
+    border-bottom: 1px solid #04820d;
+}
+
+.missionSection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    box-shadow: #039519 0px 0px 2px;
+}
+
+.missionSection h2 {
+    font-size: 12px;
+    color: #3b0462;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #04820d;
+}
+
+.dataMission {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.kotak-belum, .kotak-proses, .kotak-selesai {
+    padding: 6px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #111;
+}
+
+.kotak-belum { background: #f19ea5; }
+.kotak-proses { background: #edd080; }
+.kotak-selesai { background: #a9f4ba; }
+
+.header {
+    background: linear-gradient(180deg, #1b7502, #039519);
+    color: white;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo {
+    height: 28px;
+    width: auto;
+}
+
+.teamName {
+    font-family: 'Poppins', sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.updateInfo {
+    margin-left: auto;
+    font-size: 12px;
+    color: #d1e7dd;
+}
+
+.gridLabel1 {
+    opacity: 0.5;
+    padding: 3px 0px;
+}
+
+.gridLabel2 {
+    opacity: 0.5;
+    padding: 8px 6px;
+}
