@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Di bawah ini adalah kode lengkap untuk file `README.md` yang merinci proyek Next.js Anda.
 
-## Getting Started
+````markdown
+# Sistem Monitoring Misi SAFINAH-ONE NOVITA
 
-First, run the development server:
+Aplikasi web ini adalah dashboard monitoring misi berbasis Next.js (App Router), menggunakan Supabase untuk data _realtime_ dan Leaflet.js untuk visualisasi peta. Aplikasi ini memungkinkan pemantauan posisi, status misi, dan gambar secara langsung.
+
+## Fitur Utama
+
+* **Peta Interaktif**: Menampilkan posisi kapal, lintasan, dan titik-titik penting misi secara _realtime_ menggunakan Leaflet.js.
+* **Data Navigasi _Realtime_**: Memperbarui data seperti koordinat, kecepatan (SOG), dan arah (COG) secara langsung dari database.
+* **Log Status Misi**: Memvisualisasikan kemajuan misi (Persiapan, Start, Floating ball set, dll.) dengan indikator warna.
+* **Galeri Gambar**: Menampilkan gambar yang diunggah dari kamera atas dan bawah.
+* **Manajemen Kunci API yang Aman**: Menggunakan variabel lingkungan (`.env`) untuk menjaga kerahasiaan kunci API Supabase.
+
+---
+
+## 🚀 Memulai
+
+Ikuti langkah-langkah berikut untuk menginisiasi dan menjalankan proyek di lingkungan lokal Anda.
+
+### 1. Klon Repositori
+
+Jika Anda menggunakan Git, klon repositori proyek ini.
+
+```bash
+git clone <URL_REPO_ANDA>
+cd <nama_folder_proyek>
+````
+
+### 2\. Instalasi Dependensi
+
+Instal semua paket yang diperlukan dengan npm atau Yarn.
+
+```bash
+npm install
+# atau
+yarn
+```
+
+### 3\. Konfigurasi Lingkungan
+
+Buat file `.env.local` di root proyek. Ini akan digunakan untuk menyimpan kunci API Supabase Anda.
+
+```bash
+touch .env.local
+```
+
+Tambahkan URL dan kunci anonim Supabase Anda ke dalam file tersebut. Pastikan kunci dimulai dengan `NEXT_PUBLIC_` agar dapat diakses oleh kode sisi klien.
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=[https://jyjunbzusfrmaywmndpa.supabase.co](https://jyjunbzusfrmaywmndpa.supabase.co)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5anVuYnp1c2ZybWF5d21uZHBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDMxMTgsImV4cCI6MjA2OTQxOTExOH0.IQ6yyyR2OpvQj1lIL1yFsWfVNhJIm2_EFt5Pnv4Bd38
+```
+
+### 4\. Menjalankan Server Pengembangan
+
+Jalankan server pengembangan Next.js.
 
 ```bash
 npm run dev
-# or
+# atau
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Server akan berjalan secara lokal di `http://localhost:3000`. Buka URL tersebut di browser Anda untuk melihat dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+-----
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ⚙️ Struktur Proyek
 
-## Learn More
+Proyek ini menggunakan **App Router** terbaru dari Next.js. Berikut adalah penjelasan singkat tentang struktur foldernya:
 
-To learn more about Next.js, take a look at the following resources:
+  * **`app/`**: Berisi semua kode aplikasi, tata letak, dan halaman.
+      * `layout.tsx`: Mendefinisikan struktur UI yang dibagikan (`<Header>`, dll.) untuk seluruh aplikasi.
+      * `page.tsx`: Halaman utama dan logika inti dari dashboard.
+      * `components/`: Folder untuk komponen UI yang dapat digunakan kembali.
+  * **`public/`**: Berisi aset statis seperti gambar logo, ikon, dan ikon peta.
+  * **`.env.local`**: File untuk variabel lingkungan yang sensitif.
+  * **`tsconfig.json`**: File konfigurasi TypeScript.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+<!-- end list -->
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+```
