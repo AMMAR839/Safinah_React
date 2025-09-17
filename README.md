@@ -22,8 +22,8 @@ Ikuti langkah-langkah berikut untuk menginisiasi dan menjalankan proyek di lingk
 Jika Anda menggunakan Git, klon repositori proyek ini.
 
 ```bash
-git clone <URL_REPO_ANDA>
-cd <nama_folder_proyek>
+git clone https://github.com/AMMAR839/Safinah_React.git
+cd Safinah_React
 ````
 
 ### 2\. Instalasi Dependensi
