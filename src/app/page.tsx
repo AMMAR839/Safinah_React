@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
+import { isNear } from './components/Near';
+ 
 
 import Header from './components/Header';
 import NavData from './components/NavData';
@@ -80,6 +81,23 @@ export default function HomePage() {
     const [mapState, setMapState] = useState<MapState>({ view_type: 'lintasan1', is_refreshed: false });
     const [errorMessage, setErrorMessage] = useState<string>('');
 
+    
+
+    const updateMissionStatusInSupabase = async (missionId: keyof MissionStatus, status: string) => {
+        try {
+            const updateData = { [missionId]: status };
+            const { error } = await supabase
+                .from('data_mission')
+                .update(updateData)
+                .eq('id', 1);
+
+            if (error) throw error;
+            console.log(`Status misi '${missionId}' berhasil diperbarui menjadi ${status}.`);
+        } catch (error) {
+            console.error('Gagal memperbarui status misi:', error);
+        }
+    };
+
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
@@ -116,6 +134,34 @@ export default function HomePage() {
             .channel('nav_data_changes')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nav_data' }, payload => {
                 setNavData(payload.new as NavData);
+                const currentPosition: [number, number] = [payload.new.latitude, payload.new.longitude];
+                const tolerance = 5; 
+                const waypoints = missionWaypoints[mapState.view_type];
+
+                if(isNear(currentPosition, waypoints.start, tolerance)) {
+                    updateMissionStatusInSupabase('mission_persiapan', 'selesai');
+                    updateMissionStatusInSupabase('mission_start', 'proses');
+                }
+                if(isNear(currentPosition, waypoints.buoys, tolerance)) {
+                    updateMissionStatusInSupabase('mission_start', 'selesai');
+                    updateMissionStatusInSupabase('mission_buoys', 'proses');
+                }
+
+                if(isNear(currentPosition, waypoints.image_surface, tolerance)) {
+                    updateMissionStatusInSupabase('mission_buoys', 'selesai');
+                    updateMissionStatusInSupabase('image_atas', 'proses');
+                }
+
+                if(isNear(currentPosition, waypoints.image_underwater, tolerance)) {
+                    updateMissionStatusInSupabase('image_atas', 'selesai');
+                    updateMissionStatusInSupabase('image_bawah', 'proses');
+                }
+
+                if(isNear(currentPosition, waypoints.finish, tolerance)) {
+                    updateMissionStatusInSupabase('image_bawah', 'selesai');
+                    updateMissionStatusInSupabase('mission_finish', 'proses');
+                }
+                              
             })
             .subscribe();
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import L, { LayerGroup, Polyline, Marker } from 'leaflet';
 import 'leaflet-rotatedmarker';
+import 'leaflet/dist/leaflet.css';
 
 interface NavData {
     latitude: number;
@@ -20,7 +21,7 @@ interface MapState {
 
 export interface Waypoints {
     start: [number, number];
-    buoys: number[];
+    buoys: [number,number];
     finish: [number, number];
     image_surface: [number, number];
     image_underwater: [number, number];
@@ -37,7 +38,6 @@ interface MapProps {
 const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
-const finishIcon = L.icon({ iconUrl: '/finish.png', iconSize: [25, 25], iconAnchor: [12, 24] });
 const shipIcon = L.icon({ iconUrl: '/kapalasli.png', iconSize: [10, 20], iconAnchor: [5, 10] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
@@ -103,7 +103,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
         L.marker(waypoints.start, { icon: startIcon, opacity: 1 }).addTo(waypointLayersRef.current).bindPopup('Titik Start');
         L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 0.4 }).addTo(waypointLayersRef.current).bindPopup('image surface');
         L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 0.4 }).addTo(waypointLayersRef.current).bindPopup('image underwater');
-        L.marker(waypoints.finish, { icon: finishIcon, opacity: 0.4 }).addTo(waypointLayersRef.current).bindPopup('Finish');
+
         
         waypointLayersRef.current.addTo(mapInstance);
     };
