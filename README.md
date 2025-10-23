@@ -1,4 +1,4 @@
-Di bawah ini adalah kode lengkap untuk file `README.md` yang merinci proyek Next.js Anda.
+
 
 ````markdown
 # Sistem Monitoring Misi SAFINAH-ONE NOVITA
