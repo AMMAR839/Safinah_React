@@ -1,6 +1,5 @@
 
 
-````markdown
 # Sistem Monitoring Misi SAFINAH-ONE NOVITA
 
 Aplikasi web ini adalah dashboard monitoring misi berbasis Next.js (App Router), menggunakan Supabase untuk data _realtime_ dan Leaflet.js untuk visualisasi peta. Aplikasi ini memungkinkan pemantauan posisi, status misi, dan gambar secara langsung.
