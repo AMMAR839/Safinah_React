@@ -19,8 +19,8 @@ const Header = () => {
                 <img src="/LOGO.png" alt="Logo" className="logo" />
                 <span className="teamName">SAFINAH-ONE NOVITA</span>
             </div>
-            <div className="updateInfo">
-                Last Update: <span>{counter}</span> detik
+            <div className='navTitle'>
+                <h1>Universitas Gadjah Mada</h1>
             </div>
         </header>
     );

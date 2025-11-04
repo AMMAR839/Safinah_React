@@ -1,40 +1,41 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import L, { LayerGroup, Polyline, Marker } from 'leaflet';
+import L, { LayerGroup } from 'leaflet';
 import 'leaflet-rotatedmarker';
 import 'leaflet/dist/leaflet.css';
 
 interface NavData {
-    latitude: number;
-    longitude: number;
+  latitude: number;
+  longitude: number;
 }
 
 interface CogData {
-    cog: number;
+  cog: number;
 }
 
 interface MapState {
-    view_type: string;
-    is_refreshed: boolean;
+  view_type: string;
+  is_refreshed: boolean;
 }
 
 export interface Waypoints {
-    start: [number, number];
-    buoys: [number,number];
-    finish: [number, number];
-    image_surface: [number, number];
-    image_underwater: [number, number];
+  start: [number, number];
+  buoys: [number, number];
+  finish: [number, number];
+  image_surface: [number, number];
+  image_underwater: [number, number];
 }
 
 interface MapProps {
-    navData: NavData | null;
-    cogData: CogData | null;
-    mapState: MapState;
-    missionWaypoints: { [key: string]: Waypoints };
-    supabase: any;
+  navData: NavData | null;
+  cogData: CogData | null;
+  mapState: MapState;
+  missionWaypoints: { [key: string]: Waypoints };
+  supabase: any;
 }
 
+/** ===================== ICONS ===================== */
 const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
@@ -42,171 +43,250 @@ const shipIcon = L.icon({ iconUrl: '/kapalasli.png', iconSize: [10, 20], iconAnc
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
 
+/** ===================== CONFIG: Single Source of Truth ===================== */
+type MissionConfig = {
+  center: [number, number];
+  latLabels: string[];
+  lonLabels: string[];
+};
+
+const MISSION_CONFIG: Record<string, MissionConfig> = {
+  lintasan1: {
+    center: [-7.769395998266628, 110.38289500996561],
+    latLabels: ['1', '2', '3', '4', '5'],
+    lonLabels: ['A', 'B', 'C', 'D', 'E'],
+  },
+  lintasan2: {
+    center: [-7.915044, 112.588824],
+    latLabels: ['A', 'B', 'C', 'D', 'E'],
+    lonLabels: ['1', '2', '3', '4', '5'],
+  },
+};
+
+// Fallback ke lintasan1 jika tipe tak dikenal
+const getConfig = (missionType: string): MissionConfig =>
+  MISSION_CONFIG[missionType] ?? MISSION_CONFIG['lintasan1'];
+
+/** ===================== COMPONENT ===================== */
 const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints, supabase }) => {
-    const mapRef = useRef<L.Map | null>(null);
-    const shipMarkerRef = useRef<L.Marker | null>(null);
-    const pathRef = useRef<L.Polyline | null>(null);
-    const trackCoordinatesRef = useRef<number[][]>([]);
-    const gridLayers1Ref = useRef<LayerGroup>(L.layerGroup());
-    const gridLayers2Ref = useRef<LayerGroup>(L.layerGroup());
-    const waypointLayersRef = useRef<LayerGroup>(L.layerGroup());
+  const mapRef = useRef<L.Map | null>(null);
+  const shipMarkerRef = useRef<L.Marker | null>(null);
+  const pathRef = useRef<L.Polyline | null>(null);
+  const trackCoordinatesRef = useRef<[number, number][]>([]);
+  const gridLayersRef = useRef<Record<string, LayerGroup>>({
+    lintasan1: L.layerGroup(),
+    lintasan2: L.layerGroup(),
+  });
+  const waypointLayersRef = useRef<LayerGroup>(L.layerGroup());
 
-    const metersToLatLon = (centerLat: number, meters: number): { dLat: number, dLon: number } => {
-        const metersPerDegLat = 111320;
-        const metersPerDegLon = 111320 * Math.cos(centerLat * Math.PI / 180);
-        return {
-            dLat: meters / metersPerDegLat,
-            dLon: meters / metersPerDegLon
-        };
+  const metersToLatLon = (centerLat: number, meters: number): { dLat: number; dLon: number } => {
+    const metersPerDegLat = 111320;
+    const metersPerDegLon = 111320 * Math.cos((centerLat * Math.PI) / 180);
+    return {
+      dLat: meters / metersPerDegLat,
+      dLon: meters / metersPerDegLon,
     };
+  };
 
-    const drawGrid = (mapInstance: L.Map, missionType: string) => {
-        const layersToDraw = missionType === 'lintasan1' ? gridLayers1Ref.current : gridLayers2Ref.current;
-        const centerPoint = missionType === 'lintasan1' ? [-7.769522, 110.382875] : [-7.915044, 112.588824];
-        const latLabels = missionType === 'lintasan1' ? ['1', '2', '3', '4', '5'] : ['A', 'B', 'C', 'D', 'E'];
-        const lonLabels = missionType === 'lintasan1' ? ['A', 'B', 'C', 'D', 'E'] : ['1', '2', '3', '4', '5'];
-        const numDivisions = 5;
-        const { dLat, dLon } = metersToLatLon(centerPoint[0], 5);
-        const totalDeltaLat = dLat * numDivisions;
-        const totalDeltaLon = dLon * numDivisions;
-        const newBounds = L.latLngBounds(
-            [centerPoint[0] - totalDeltaLat / 2, centerPoint[1] - totalDeltaLon / 2],
-            [centerPoint[0] + totalDeltaLat / 2, centerPoint[1] + totalDeltaLon / 2]
-        );
+  const drawGrid = (mapInstance: L.Map, missionType: string) => {
+    const { center, latLabels, lonLabels } = getConfig(missionType);
+    const layersToDraw =
+      gridLayersRef.current[missionType] ??
+      (gridLayersRef.current[missionType] = L.layerGroup());
 
-        layersToDraw.clearLayers();
-        for (let i = 0; i <= numDivisions; i++) {
-            const lat = newBounds.getSouth() + (i * (totalDeltaLat / numDivisions));
-            L.polyline([[lat, newBounds.getWest()], [lat, newBounds.getEast()]], { color: '#888', weight: 0.5 }).addTo(layersToDraw);
-            
-            const lon = newBounds.getWest() + (i * (totalDeltaLon / numDivisions));
-            L.polyline([[newBounds.getSouth(), lon], [newBounds.getNorth(), lon]], { color: '#888', weight: 0.5 }).addTo(layersToDraw);
-        }
+    const numDivisions = 5;
+    const { dLat, dLon } = metersToLatLon(center[0], 5);
+    const totalDeltaLat = dLat * numDivisions;
+    const totalDeltaLon = dLon * numDivisions;
 
-        for (let i = 0; i < numDivisions; i++) {
-            const lat = newBounds.getSouth() + ((i + 1) * (totalDeltaLat / numDivisions));
-            const lon = newBounds.getWest() + ((i + 1) * (totalDeltaLon / numDivisions));
-            L.marker([lat, newBounds.getWest()], {
-                icon: L.divIcon({ className: 'gridLabel1', html: latLabels[i], iconAnchor: [10, 10] })
-            }).addTo(layersToDraw);
-            L.marker([newBounds.getSouth(), lon], {
-                icon: L.divIcon({ className: 'gridLabel2', html: lonLabels[i], iconAnchor: [10, 10] })
-            }).addTo(layersToDraw);
-        }
-    };
+    const newBounds = L.latLngBounds(
+      [center[0] - totalDeltaLat / 2, center[1] - totalDeltaLon / 2],
+      [center[0] + totalDeltaLat / 2, center[1] + totalDeltaLon / 2]
+    );
 
-    const drawWaypoints = (mapInstance: L.Map, missionType: string) => {
-        waypointLayersRef.current.clearLayers();
-        const waypoints = missionWaypoints[missionType];
-        if (!waypoints) return;
+    layersToDraw.clearLayers();
 
-        L.marker(waypoints.start, { icon: startIcon, opacity: 1 }).addTo(waypointLayersRef.current).bindPopup('Titik Start');
-        L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 0.4 }).addTo(waypointLayersRef.current).bindPopup('image surface');
-        L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 0.4 }).addTo(waypointLayersRef.current).bindPopup('image underwater');
+    // Grid lines
+    for (let i = 0; i <= numDivisions; i++) {
+      const lat = newBounds.getSouth() + i * (totalDeltaLat / numDivisions);
+      L.polyline(
+        [
+          [lat, newBounds.getWest()],
+          [lat, newBounds.getEast()],
+        ],
+        { color: '#888', weight: 0.5 }
+      ).addTo(layersToDraw);
 
-        
-        waypointLayersRef.current.addTo(mapInstance);
-    };
+      const lon = newBounds.getWest() + i * (totalDeltaLon / numDivisions);
+      L.polyline(
+        [
+          [newBounds.getSouth(), lon],
+          [newBounds.getNorth(), lon],
+        ],
+        { color: '#888', weight: 0.5 }
+      ).addTo(layersToDraw);
+    }
 
-    const fetchBuoyData = async (mapInstance: L.Map) => {
-        const { data: buoys, error } = await supabase.from('buoys').select('*');
-        if (error) {
-            console.error('Failed to fetch buoy data:', error);
-            return;
-        }
-        buoys.forEach((buoy: { color: string; latitude: number; longitude: number; }) => {
-            const icon = buoy.color === 'red' ? redBuoyIcon : greenBuoyIcon;
-            L.marker([buoy.latitude, buoy.longitude], { icon: icon }).addTo(mapInstance).bindPopup(`Pelampung ${buoy.color}`);
-        });
-    };
+    // Labels
+    for (let i = 0; i < numDivisions; i++) {
+      const lat = newBounds.getSouth() + (i + 1) * (totalDeltaLat / numDivisions);
+      const lon = newBounds.getWest() + (i + 1) * (totalDeltaLon / numDivisions);
+      L.marker([lat, newBounds.getWest()], {
+        icon: L.divIcon({ className: 'gridLabel1', html: latLabels[i], iconAnchor: [10, 10] }),
+      }).addTo(layersToDraw);
+      L.marker([newBounds.getSouth(), lon], {
+        icon: L.divIcon({ className: 'gridLabel2', html: lonLabels[i], iconAnchor: [10, 10] }),
+      }).addTo(layersToDraw);
+    }
+  };
 
-    useEffect(() => {
-        if (!mapRef.current) {
-            const mapInstance = L.map('map', {
-                center: [-7.769522, 110.382875],
-                zoom: 23,
-                scrollWheelZoom: false,
-                dragging: false,
-                doubleClickZoom: false,
-                boxZoom: false,
-                touchZoom: false,
-                zoomControl: false,
-            });
-            mapRef.current = mapInstance;
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', { maxZoom: 21.2, minZoom: 21.2 }).addTo(mapInstance);
-            
-            drawGrid(mapInstance, 'lintasan1');
-            drawGrid(mapInstance, 'lintasan2');
-            fetchBuoyData(mapInstance);
-        }
-    }, []);
+  const drawWaypoints = (mapInstance: L.Map, missionType: string) => {
+    waypointLayersRef.current.clearLayers();
+    const waypoints = missionWaypoints[missionType];
+    if (!waypoints) return;
 
-    useEffect(() => {
-        if (!mapRef.current || !mapState) return;
+    L.marker(waypoints.start, { icon: startIcon, opacity: 1 })
+      .addTo(waypointLayersRef.current)
+      .bindPopup('Titik Start');
 
-        const { dLat, dLon } = metersToLatLon(mapState.view_type === 'lintasan1' ? -7.769522 : -7.915044, 12.5);
-        const centerPoint = mapState.view_type === 'lintasan1' ? [-7.769522, 110.382875] : [-7.915044, 112.588824];
+    L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 0.4 })
+      .addTo(waypointLayersRef.current)
+      .bindPopup('image surface');
 
-        const bounds = L.latLngBounds(
-            [centerPoint[0] - dLat, centerPoint[1] - dLon],
-            [centerPoint[0] + dLat, centerPoint[1] + dLon]
-        );
+    L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 0.4 })
+      .addTo(waypointLayersRef.current)
+      .bindPopup('image underwater');
 
-        mapRef.current.setMaxBounds(bounds);
-        mapRef.current.fitBounds(bounds);
+    waypointLayersRef.current.addTo(mapInstance);
+  };
 
-        gridLayers1Ref.current.remove();
-        gridLayers2Ref.current.remove();
-        if (mapState.view_type === 'lintasan1') {
-            gridLayers1Ref.current.addTo(mapRef.current);
-            drawWaypoints(mapRef.current, 'lintasan1');
-        } else {
-            gridLayers2Ref.current.addTo(mapRef.current);
-            drawWaypoints(mapRef.current, 'lintasan2');
-        }
+  const fetchBuoyData = async (mapInstance: L.Map) => {
+    const { data: buoys, error } = await supabase.from('buoys').select('*');
+    if (error) {
+      console.error('Failed to fetch buoy data:', error);
+      return;
+    }
+    buoys.forEach((buoy: { color: string; latitude: number; longitude: number }) => {
+      const icon = buoy.color === 'red' ? redBuoyIcon : greenBuoyIcon;
+      L.marker([buoy.latitude, buoy.longitude], { icon }).addTo(mapInstance).bindPopup(`Pelampung ${buoy.color}`);
+    });
+  };
 
-        if (mapState.is_refreshed) {
-            if (pathRef.current) {
-                mapRef.current.removeLayer(pathRef.current);
-                pathRef.current = null;
-            }
-            if (shipMarkerRef.current) {
-                mapRef.current.removeLayer(shipMarkerRef.current);
-                shipMarkerRef.current = null;
-            }
-            trackCoordinatesRef.current = [];
-        }
-    }, [mapState]);
+  /** ===================== INIT MAP ===================== */
+  useEffect(() => {
+    if (mapRef.current) return;
 
-    useEffect(() => {
-        if (!mapRef.current || !navData) return;
-        
-        const latestPosition: [number, number] = [navData.latitude, navData.longitude];
-        
-        if (shipMarkerRef.current) {
-            (shipMarkerRef.current as any).setLatLng(latestPosition);
-        } else {
-            (shipMarkerRef.current as any) = L.marker(latestPosition, { icon: shipIcon }).addTo(mapRef.current);
-            if (cogData) {
-                (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
-            }
-        }
-        
-        if (cogData && shipMarkerRef.current) {
-            (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
-        }
+    const initialCenter = getConfig('lintasan1').center;
 
-        trackCoordinatesRef.current.push(latestPosition);
-        if (trackCoordinatesRef.current.length < 2) return;
+    const mapInstance = L.map('map', {
+      center: initialCenter,
+      zoom: 23,
+      scrollWheelZoom: false,
+      dragging: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      touchZoom: false,
+      zoomControl: false,
+    });
+    mapRef.current = mapInstance;
 
-        if (pathRef.current) {
-            pathRef.current.setLatLngs(trackCoordinatesRef.current as [number, number][]);
-        } else {
-            pathRef.current = L.polyline(trackCoordinatesRef.current as [number, number][], { color: 'blue', weight: 0.5, dashArray: '2, 2' }).addTo(mapRef.current);
-        }
-    }, [navData, cogData]);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
+      maxZoom: 21.2,
+      minZoom: 21.2,
+    }).addTo(mapInstance);
 
-    return <div id="map" className="map"></div>;
+    // Draw both grids once; show one at a time via view switcher
+    drawGrid(mapInstance, 'lintasan1');
+    drawGrid(mapInstance, 'lintasan2');
+
+    fetchBuoyData(mapInstance);
+
+    // Example rectangles around each mission center
+    const deltaLat = 0.1;
+    const deltaLon = 0.1;
+    const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({ x: center[0], y: center[1] }));
+
+    centers.forEach(({ x, y }) => {
+      const MaxgetBounds: L.LatLngBoundsExpression = [
+        [x - (1 + deltaLat), y - (1 + deltaLon)],
+        [x + 2 * deltaLat, y + 1 + deltaLon],
+      ];
+      L.rectangle(MaxgetBounds, {
+        color: 'blue',
+        weight: 1,
+        fillColor: '#82d6fdff',
+        fillOpacity: 1,
+      }).addTo(mapInstance);
+    });
+  }, []);
+
+  /** ===================== RESPOND TO STATE CHANGES ===================== */
+  useEffect(() => {
+    if (!mapRef.current || !mapState) return;
+
+    const { center } = getConfig(mapState.view_type);
+    const { dLat, dLon } = metersToLatLon(center[0], 12.5);
+
+    const bounds = L.latLngBounds(
+      [center[0] - dLat, center[1] - dLon],
+      [center[0] + dLat, center[1] + dLon]
+    );
+
+    mapRef.current.setMaxBounds(bounds);
+    mapRef.current.fitBounds(bounds);
+
+    // Toggle grid layers per view
+    Object.values(gridLayersRef.current).forEach((lg) => lg.remove());
+    const activeGrid = gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];
+    activeGrid.addTo(mapRef.current);
+
+    drawWaypoints(mapRef.current, mapState.view_type);
+
+    if (mapState.is_refreshed) {
+      if (pathRef.current) {
+        mapRef.current.removeLayer(pathRef.current);
+        pathRef.current = null;
+      }
+      if (shipMarkerRef.current) {
+        mapRef.current.removeLayer(shipMarkerRef.current);
+        shipMarkerRef.current = null;
+      }
+      trackCoordinatesRef.current = [];
+    }
+  }, [mapState]);
+
+  /** ===================== NAV & COG ===================== */
+  useEffect(() => {
+    if (!mapRef.current || !navData) return;
+
+    const latestPosition: [number, number] = [navData.latitude, navData.longitude];
+
+    if (shipMarkerRef.current) {
+      (shipMarkerRef.current as any).setLatLng(latestPosition);
+    } else {
+      shipMarkerRef.current = L.marker(latestPosition, { icon: shipIcon }).addTo(mapRef.current);
+      if (cogData) (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
+    }
+
+    if (cogData && shipMarkerRef.current) {
+      (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
+    }
+
+    trackCoordinatesRef.current.push(latestPosition);
+    if (trackCoordinatesRef.current.length < 2) return;
+
+    if (pathRef.current) {
+      pathRef.current.setLatLngs(trackCoordinatesRef.current as [number, number][]);
+    } else {
+      pathRef.current = L.polyline(trackCoordinatesRef.current as [number, number][], {
+        color: 'blue',
+        weight: 0.5,
+        dashArray: '2, 2',
+      }).addTo(mapRef.current);
+    }
+  }, [navData, cogData]);
+
+  return <div id="map" className="map"></div>;
 };
 
 export default Map;

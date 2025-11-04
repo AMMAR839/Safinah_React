@@ -1,17 +1,15 @@
-Di bawah ini adalah kode lengkap untuk file `README.md` yang merinci proyek Next.js Anda.
 
-````markdown
 # Sistem Monitoring Misi SAFINAH-ONE NOVITA
 
 Aplikasi web ini adalah dashboard monitoring misi berbasis Next.js (App Router), menggunakan Supabase untuk data _realtime_ dan Leaflet.js untuk visualisasi peta. Aplikasi ini memungkinkan pemantauan posisi, status misi, dan gambar secara langsung.
 
 ## Fitur Utama
 
-* **Peta Interaktif**: Menampilkan posisi kapal, lintasan, dan titik-titik penting misi secara _realtime_ menggunakan Leaflet.js.
-* **Data Navigasi _Realtime_**: Memperbarui data seperti koordinat, kecepatan (SOG), dan arah (COG) secara langsung dari database.
-* **Log Status Misi**: Memvisualisasikan kemajuan misi (Persiapan, Start, Floating ball set, dll.) dengan indikator warna.
-* **Galeri Gambar**: Menampilkan gambar yang diunggah dari kamera atas dan bawah.
-* **Manajemen Kunci API yang Aman**: Menggunakan variabel lingkungan (`.env`) untuk menjaga kerahasiaan kunci API Supabase.
+**Peta Interaktif**: Menampilkan posisi kapal, lintasan, dan titik-titik penting misi secara _realtime_ menggunakan Leaflet.js.
+**Data Navigasi _Realtime_**: Memperbarui data seperti koordinat, kecepatan (SOG), dan arah (COG) secara langsung dari database.
+**Log Status Misi**: Memvisualisasikan kemajuan misi (Persiapan, Start, Floating ball set, dll.) dengan indikator warna.
+**Galeri Gambar**: Menampilkan gambar yang diunggah dari kamera atas dan bawah.
+**Manajemen Kunci API yang Aman**: Menggunakan variabel lingkungan (`.env`) untuk menjaga kerahasiaan kunci API Supabase.
 
 ---
 
@@ -24,8 +22,8 @@ Ikuti langkah-langkah berikut untuk menginisiasi dan menjalankan proyek di lingk
 Jika Anda menggunakan Git, klon repositori proyek ini.
 
 ```bash
-git clone <URL_REPO_ANDA>
-cd <nama_folder_proyek>
+git clone https://github.com/AMMAR839/Safinah_React.git
+cd Safinah_React
 ````
 
 ### 2\. Instalasi Dependensi

@@ -4,9 +4,10 @@ interface NavDataProps {
     data: { timestamp: string, latitude: number, longitude: number, sog_ms: number } | null;
     cogData: { cog: number } | null;
     errorMessage: string;
+    updateIntervalMs?: number | null;
 }
 
-const NavData: React.FC<NavDataProps> = ({ data, cogData, errorMessage }) => {
+const NavData: React.FC<NavDataProps> = ({ data, cogData, errorMessage,updateIntervalMs }) => {
     const formatA = (lat: number, lon: number): string => {
         const getCardinalDirection = (value: number, type: 'lat' | 'lon'): 'N' | 'S' | 'E' | 'W' | 'N/A' => {
         if (type === 'lat') return value >= 0 ? 'N' : 'S';
@@ -28,14 +29,18 @@ const NavData: React.FC<NavDataProps> = ({ data, cogData, errorMessage }) => {
 
     return (
         <section className="dataSection">
-            <h2>Data Navigasi</h2>
+        <h2>
+            <span>Data Navigasi</span>
+            <span>
+            Update Age:{' '}
+            {updateIntervalMs != null ? `${updateIntervalMs} ms` : 'N/A'}
+            </span>
+        </h2>
             {errorMessage && <div className="errorMessage">{errorMessage}</div>}
             <div className="isiData">
                 <div className="kotak"><h3>Timestamp</h3><p>{data ? new Date(data.timestamp).toLocaleString() : 'N/A'}</p></div>
                 <div className="kotak"><h3>Koordinat (DD,DDDD)</h3><p>{data ? formatA(data.latitude, data.longitude) : 'N/A'}</p></div>
-                <div className="kotak">
-                    <h3>SOG</h3>
-                    <p><span>{data ? msToKmh(data.sog_ms) : 'N/A'}</span> km/h</p></div>
+                <div className="kotak"><h3>SOG</h3><p><span>{data ? msToKmh(data.sog_ms) : 'N/A'}</span> km/h</p></div>
                 <div className="kotak"><h3>COG</h3><p><span>{cogData && cogData.cog ? cogData.cog.toFixed(2) : 'N/A'}</span>°</p></div>
             </div>
         </section>

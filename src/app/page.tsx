@@ -73,6 +73,27 @@ interface MapState {
     is_refreshed: boolean;
 }
 
+async function resetMissionStatus() {
+    try {
+        const { error } = await supabase
+            .from('data_mission')
+            .update({
+                mission_persiapan: 'belum',
+                mission_start: 'belum',
+                mission_buoys: 'belum',
+                image_atas: 'belum',
+                image_bawah: 'belum',
+                mission_finish: 'belum'
+            })
+            .eq('id', 1);
+
+        if (error) throw error;
+        console.log('Status misi berhasil direset ke "belum".');
+    } catch (error) {
+        console.error('Gagal mereset status misi:', error);
+    }
+}
+
 export default function HomePage() {
     const [navData, setNavData] = useState<NavData | null>(null);
     const [cogData, setCogData] = useState<CogData | null>(null);
@@ -80,6 +101,8 @@ export default function HomePage() {
     const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
     const [mapState, setMapState] = useState<MapState>({ view_type: 'lintasan1', is_refreshed: false });
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
+    const [controlsEnabled, setControlsEnabled] = useState<boolean>(false);
 
     
 
@@ -101,9 +124,13 @@ export default function HomePage() {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                const { data: nav, error: navError } = await supabase.from('nav_data').select('*').order('timestamp', { ascending: false }).limit(1);
+                const { data: nav, error: navError } = await supabase.from('nav_data').select('*').order('timestamp', { ascending: false }).limit(2);
                 if (navError) throw navError;
                 setNavData(nav[0] || null);
+                if (nav && nav.length >= 2) {
+                const last = new Date(nav[0].timestamp).getTime();
+                const prev = new Date(nav[1].timestamp).getTime();
+                setUpdateIntervalMs(last - prev); }
 
                 const { data: cog, error: cogError } = await supabase.from('cog_data').select('*').order('timestamp', { ascending: false }).limit(1);
                 if (cogError) throw cogError;
@@ -133,10 +160,18 @@ export default function HomePage() {
         const navSubscription = supabase
             .channel('nav_data_changes')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nav_data' }, payload => {
-                setNavData(payload.new as NavData);
+                setNavData(prev => {
+                    if (prev && prev.timestamp) {
+                    const prevTime = new Date(prev.timestamp).getTime();
+                    const newTime = new Date(payload.new.timestamp).getTime();
+                    setUpdateIntervalMs(newTime - prevTime); // 🆕 dalam ms
+                    }
+                    return payload.new as NavData;
+                });
                 const currentPosition: [number, number] = [payload.new.latitude, payload.new.longitude];
                 const tolerance = 5; 
                 const waypoints = missionWaypoints[mapState.view_type];
+                
 
                 if(isNear(currentPosition, waypoints.start, tolerance)) {
                     updateMissionStatusInSupabase('mission_persiapan', 'selesai');
@@ -218,8 +253,11 @@ export default function HomePage() {
             console.error('Failed to update map state:', error);
         }
     };
-
+    const [clicked, setClicked] = useState(false);
     const handleRefresh = async () => {
+        setClicked(true);
+        setTimeout(() => setClicked(false), 300); 
+        resetMissionStatus();
         try {
             const { error } = await supabase
                 .from('map_state')
@@ -234,7 +272,7 @@ export default function HomePage() {
     return (
         <main className="main">
             <section className="gabungan">
-                <NavData data={navData} cogData={cogData} errorMessage={errorMessage} />
+                <NavData data={navData} cogData={cogData} errorMessage={errorMessage} updateIntervalMs={updateIntervalMs}/>
                 <MissionLog status={missionStatus} />
                 <img src="/ornamen.png" alt="hiasan" className="ornamen" />
             </section>
@@ -250,25 +288,34 @@ export default function HomePage() {
                     missionWaypoints={missionWaypoints}
                     supabase={supabase}
                 />
-                <div className="mapControls">
+                <div className={`mapControls ${!controlsEnabled ? 'no-refresh' : ''}`}>
                     <button 
                         id="lintasan1" 
                         className={`tombolLintasan ${mapState.view_type === 'lintasan1' ? 'aktif' : ''}`}
-                        onClick={() => handleSelectLintasan('lintasan1')}
+                        onClick={controlsEnabled ? () => handleSelectLintasan('lintasan1') : undefined}
                     >
                         Lintasan 1
                     </button>
+
                     <button 
                         id="lintasan2" 
                         className={`tombolLintasan ${mapState.view_type === 'lintasan2' ? 'aktif' : ''}`}
-                        onClick={() => handleSelectLintasan('lintasan2')}
+                        onClick={controlsEnabled ? () => handleSelectLintasan('lintasan2') : undefined}
                     >
                         Lintasan 2
                     </button>
-                    <button id="tombol_refresh" className="tombolRefresh" onClick={handleRefresh}>
+
+                    {controlsEnabled && (  // kalau false, refresh nggak dirender
+                        <button
+                        id="tombol_refresh"
+                        className={`tombolRefresh ${clicked ? 'clicked' : ''}`}
+                        onClick={handleRefresh}
+                        >
                         Refresh
-                    </button>
-                </div>
+                        </button>
+                    )}
+                    </div>
+
             </section>
         </main>
     );

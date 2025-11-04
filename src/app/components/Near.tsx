@@ -1,4 +1,3 @@
-
 export const isNear = (
   currentPosition: [number, number],
   targetPosition: [number, number],
