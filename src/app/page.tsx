@@ -102,7 +102,7 @@ export default function HomePage() {
     const [mapState, setMapState] = useState<MapState>({ view_type: 'lintasan1', is_refreshed: false });
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
-    const [controlsEnabled, setControlsEnabled] = useState<boolean>(false);
+    const [controlsEnabled, setControlsEnabled] = useState<boolean>(True);
 
     
 
