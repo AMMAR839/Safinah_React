@@ -32,7 +32,7 @@ const NavData: React.FC<NavDataProps> = ({ data, cogData, errorMessage,updateInt
         <h2>
             <span>Data Navigasi</span>
             <span>
-            Update Age:{' '}
+            {' '}
             {updateIntervalMs != null ? `${updateIntervalMs} ms` : 'N/A'}
             </span>
         </h2>

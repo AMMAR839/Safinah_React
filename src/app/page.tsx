@@ -102,10 +102,9 @@ export default function HomePage() {
     const [mapState, setMapState] = useState<MapState>({ view_type: 'lintasan1', is_refreshed: false });
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
-    const [controlsEnabled, setControlsEnabled] = useState<boolean>(True);
+    const [controlsEnabled, setControlsEnabled] = useState<boolean>(true);
 
     
-
     const updateMissionStatusInSupabase = async (missionId: keyof MissionStatus, status: string) => {
         try {
             const updateData = { [missionId]: status };
@@ -164,7 +163,7 @@ export default function HomePage() {
                     if (prev && prev.timestamp) {
                     const prevTime = new Date(prev.timestamp).getTime();
                     const newTime = new Date(payload.new.timestamp).getTime();
-                    setUpdateIntervalMs(newTime - prevTime); // 🆕 dalam ms
+                    setUpdateIntervalMs(newTime - prevTime); //  dalam ms
                     }
                     return payload.new as NavData;
                 });
@@ -270,7 +269,8 @@ export default function HomePage() {
     };
 
     return (
-        <main className="main">
+        // <div className="appRoot">
+        <main className="main"> 
             <section className="gabungan">
                 <NavData data={navData} cogData={cogData} errorMessage={errorMessage} updateIntervalMs={updateIntervalMs}/>
                 <MissionLog status={missionStatus} />
@@ -318,5 +318,6 @@ export default function HomePage() {
 
             </section>
         </main>
+        // </div>
     );
 }

@@ -43,7 +43,7 @@ const shipIcon = L.icon({ iconUrl: '/kapalasli.png', iconSize: [10, 20], iconAnc
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
 
-/** ===================== CONFIG: Single Source of Truth ===================== */
+
 type MissionConfig = {
   center: [number, number];
   latLabels: string[];
@@ -114,7 +114,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [lat, newBounds.getWest()],
           [lat, newBounds.getEast()],
         ],
-        { color: '#888', weight: 0.5 }
+        { color: 'black', weight: 0.5 }
       ).addTo(layersToDraw);
 
       const lon = newBounds.getWest() + i * (totalDeltaLon / numDivisions);
@@ -123,21 +123,34 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [newBounds.getSouth(), lon],
           [newBounds.getNorth(), lon],
         ],
-        { color: '#888', weight: 0.5 }
+        { color: 'black', weight: 0.5 }
       ).addTo(layersToDraw);
     }
 
     // Labels
-    for (let i = 0; i < numDivisions; i++) {
-      const lat = newBounds.getSouth() + (i + 1) * (totalDeltaLat / numDivisions);
-      const lon = newBounds.getWest() + (i + 1) * (totalDeltaLon / numDivisions);
-      L.marker([lat, newBounds.getWest()], {
-        icon: L.divIcon({ className: 'gridLabel1', html: latLabels[i], iconAnchor: [10, 10] }),
+      // ====== LABEL DI DALAM TABEL ======
+  const cellHeight = totalDeltaLat / numDivisions;
+  const cellWidth = totalDeltaLon / numDivisions;
+
+  for (let row = 0; row < numDivisions; row++) {
+    for (let col = 0; col < numDivisions; col++) {
+      // titik tengah kotak (row, col)
+      const cellLatCenter = newBounds.getSouth() + (row + 0.5) * cellHeight;
+      const cellLonCenter = newBounds.getWest() + (col + 0.5) * cellWidth;
+
+      // gabungan label
+      const label = `${lonLabels[col]}${latLabels[row]}`; 
+
+      L.marker([cellLatCenter, cellLonCenter], {
+        icon: L.divIcon({
+          className: 'gridCellLabel',
+          html: label,
+          iconAnchor: [10, 10],
+        }),
+        
       }).addTo(layersToDraw);
-      L.marker([newBounds.getSouth(), lon], {
-        icon: L.divIcon({ className: 'gridLabel2', html: lonLabels[i], iconAnchor: [10, 10] }),
-      }).addTo(layersToDraw);
-    }
+    }}
+
   };
 
   const drawWaypoints = (mapInstance: L.Map, missionType: string) => {
@@ -279,7 +292,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       pathRef.current.setLatLngs(trackCoordinatesRef.current as [number, number][]);
     } else {
       pathRef.current = L.polyline(trackCoordinatesRef.current as [number, number][], {
-        color: 'blue',
+        color: 'red',
         weight: 0.5,
         dashArray: '2, 2',
       }).addTo(mapRef.current);

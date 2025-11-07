@@ -1,187 +1,245 @@
-/* --- Styles for page.js --- */
+/* ========== GLOBAL RESET & BASE ========== */
 
-.main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.1fr;
-    grid-template-rows: auto;
-    gap: 12px;
-    padding: 12px;
-    height: calc(100vh - 60px);
-    overflow: hidden;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background: #f5f5f5;
+}
+
+/* Kanvas utama: lebar “fix” supaya di semua laptop skalanya sama */
+/* .appRoot {
+  max-width: 1365px;     
+  margin: 0 auto;
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+  background: #e9f5ea;   
+} */
+
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  gap: 12px;
+  padding: 12px;
+  min-height: calc(100vh - 60px); /* 60px kira2 tinggi header */
+}
+
+/* Supaya tiap kolom bisa "ngecil" tanpa overflow aneh */
+.gabungan,
+.imagesSection,
+.mapSection {
+  min-height: 0;
+  background: #fff;
+}
+
+/* --- Gabungan (kiri: data navigasi + mission log) --- */
+
 .gabungan {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    overflow: hidden;
-    border: 0.01px solid #039519;
-    position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: auto;
+  border: 0.01px solid #039519;
+  position: relative;
 }
 
 .gabungan > * {
-    position: relative;
-    z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .ornamen {
-    position: absolute;
-    bottom: 0px;
-    right: 0px;
-    rotate: 180deg;
-    width: 150px;
-    height: auto;
-    opacity: 0.8;
-    z-index: 0;
-    pointer-events: none;
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  rotate: 180deg;
+  width: 150px;
+  height: auto;
+  opacity: 0.8;
+  z-index: 0;
+  pointer-events: none;
 }
 
+/* --- Section Gambar (tengah) --- */
+
+.imagesSection {
+  grid-column: 2;
+  font-size: 11px;
+  border: 0.01px solid #039519;
+  height: 100%;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.imagesSection h2 {
+  font-size: 12px;
+  color: #3b0462;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #04820d;
+}
+
+.imagesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.imageSlot {
+  display: flex;
+  flex-direction: column;
+}
+
+.imageGallery {
+  flex: 1;
+  background: #f1f3f5;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #666;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  max-height: 200px;
+}
+
+.imageGallery img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Section Map (kanan) --- */
+
 .mapSection {
-    grid-column: 3;
-    border: 0.01px solid #039519;
+  grid-column: 3;
+  border: 0.01px solid #039519;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
 }
 
 .mapSection h2 {
-    font-size: 12px;
-    color: #3b0462;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #04820d;
+  font-size: 12px;
+  color: #3b0462;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #04820d;
 }
 
+/* Map selalu proporsional dan fleksibel */
 .map {
-    flex: 1;
-    aspect-ratio: 1 / 1;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    height: 100%;
+  flex: 1;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-height: 260px;
 }
+
+/* ========== MAP CONTROLS & BUTTONS ========== */
 
 .mapControls {
-    margin-top: 6px;
-    display: flex;
-    gap: 8px;
-    justify-content: center;
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
 }
 
+.tombolLintasan,
 .tombolRefresh {
-    background-color: #2563eb; /* biru default */
-    color: white;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    width: 20%;
+  flex: 1 1 0;             /* semua tombol sama lebar */
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.3s, color 0.2s ease;
 }
 
-.tombolLintasan{
-    padding: 6px 10px;
-    border-radius: 4px;
-    width: 40%;
-    font-size: 11px;
-    cursor: pointer;
-    border: 1px solid #111;
-    transition: background 0.3s;
-
+/* Lintasan */
+.tombolLintasan {
+  border: 1px solid #111;
+  background: #e9ecef;
 }
 
-.tombolLintasan { background: #e9ecef; }
-.tombolLintasan.aktif { background: #87dd94; }
+.tombolLintasan.aktif {
+  background: #87dd94;
+}
+
+/* Refresh */
+.tombolRefresh {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+}
 
 .tombolRefresh.clicked {
   background-color: white;
   color: #2563eb;
 }
 
-.mapControls.no-refresh .tombolLintasan {
-    flex: 1;          /* dua tombol masing-masing ambil setengah */
-}
-
 .tombolRefresh:hover {
-    background: #1d4ed8;
+  background: #1d4ed8;
 }
 
-.gridLabel1 {
-    opacity: 0.5;
-    padding: 3px 0px;
+/* Kalau nanti kamu pakai .mapControls.no-refresh */
+.mapControls.no-refresh .tombolLintasan {
+  flex: 1 1 0;
 }
 
-.gridLabel2 {
-    opacity: 0.5;
-    padding: 8px 6px;
+/* ========== GRID LABELS (MAP) ========== */
+
+.gridCellLabel {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0.5;              
+  background: transparent;   
 }
 
-.imagesSection {
-    grid-column: 2;
-    font-size: 11px;
-    border: 0.01px solid #039519;
-    height: 100%;
 
-}
 
-.imagesSection h2 {
-    font-size: 12px;
-    color: #3b0462;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #04820d;
-}
 
-.imagesContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    object-fit: contain;
-}
-
-.imageSlot {
-    display: flex;
-    flex-direction: column;
-}
-
-.imageGallery {
-    flex: 1;
-    background: #f1f3f5;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: #666;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    min-height: 200px;
-    max-height: 200px;   
-}
-
-.imageGallery img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover;
-    display: block;
-
-}
+/* ========== NAV DATA SECTION ========== */
 
 .dataSection {
-    flex: 0 0 auto;
-    font-size: 11px;
-    box-shadow: #039519 0px 0px 2px;
+  flex: 0 0 auto;
+  font-size: 11px;
+  box-shadow: #039519 0px 0px 2px;
+  padding: 6px;
+  background: #fff;
 }
 
 .dataSection h2 {
-    display: flex;                     /* 🆕 sejajarkan dua span */
-    justify-content: space-between;    /* kiri-kanan */
-    align-items: center;               /* vertikal tengah */
-    font-size: 12px;
-    color: #3b0462;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #04820d;  /* garisnya sekarang satu, nyambung */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #3b0462;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #04820d;
 }
-
 
 .errorMessage {
   color: red;
@@ -190,111 +248,153 @@
 }
 
 .isiData {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
 .kotak {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 6px;
-    font-size: 11px;
-    box-shadow: 0px 0px 5px rgba(0,0,0,0.2);
-    border: #8698ab 0.01px solid;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 11px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  border: #8698ab 0.01px solid;
 }
 
 .kotak h3 {
-    font-size: 11px;
-    color: #3b0462;
-    margin-bottom: 3px;
-    border-bottom: 1px solid #04820d;
+  font-size: 11px;
+  color: #3b0462;
+  margin-bottom: 3px;
+  border-bottom: 1px solid #04820d;
 }
 
+/* ========== MISSION LOG / POSITION LOG ========== */
+
 .missionSection {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 6px;
-    box-shadow: #039519 0px 0px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  box-shadow: #039519 0px 0px 2px;
+  background: #fff;
 }
 
 .missionSection h2 {
-    font-size: 12px;
-    color: #3b0462;
-    margin-bottom: 6px;
-    border-bottom: 1px solid #04820d;
+  font-size: 12px;
+  color: #3b0462;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #04820d;
 }
 
 .dataMission {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
 }
 
-.kotak-belum, .kotak-proses, .kotak-selesai {
-    padding: 6px;
-    border-radius: 6px;
-    text-align: center;
-    font-weight: 600;
-    color: #111;
+.kotak-belum,
+.kotak-proses,
+.kotak-selesai {
+  padding: 6px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  color: #111;
 }
 
-.kotak-belum { background: #f19ea5; }
-.kotak-proses { background: #edd080; }
-.kotak-selesai { background: #a9f4ba; }
+.kotak-belum {
+  background: #f19ea5;
+}
+.kotak-proses {
+  background: #edd080;
+}
+.kotak-selesai {
+  background: #a9f4ba;
+}
+
+/* ========== HEADER ========== */
 
 .header {
-    background: linear-gradient(180deg, #1b7502, #039519);
-    color: white;
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: bold;
-    display: flex;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    flex-shrink: 0;
+  background: linear-gradient(180deg, #1b7502, #039519);
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .logo {
-    height: 28px;
-    width: auto;
+  height: 28px;
+  width: auto;
 }
 
 .teamName {
-    font-family: 'Poppins', sans-serif;
-    font-size: 18px;
-    font-weight: bold;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .updateInfo {
-    margin-left: auto;
-    font-size: 12px;
-    color: #d1e7dd;
-}
-
-.gridLabel1 {
-    opacity: 0.5;
-    padding: 3px 0px;
-}
-
-.gridLabel2 {
-    opacity: 0.5;
-    padding: 8px 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #d1e7dd;
 }
 
 .navTitle {
-    margin-left: 20px;
-    margin-right: 10px;
-    font-size: 11px;
-    font-weight: bold;
-    text-align: right;
-    flex: 1;
+  margin-left: 20px;
+  margin-right: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: right;
+  flex: 1;
 }
 
+/* ========== RESPONSIVE (kalau layar lebih kecil dari desainmu) ========== */
+
+@media (max-width: 1200px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .mapSection {
+    grid-column: 1 / -1; /* map pindah ke bawah, full width */
+    min-height: 320px;
+    
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+
+  .imagesSection,
+  .mapSection {
+    grid-column: 1;
+  }
+
+  .map {
+    min-height: 240px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .updateInfo {
+    margin-left: 0;
+  }
+}
