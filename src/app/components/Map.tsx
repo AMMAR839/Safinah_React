@@ -114,7 +114,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [lat, newBounds.getWest()],
           [lat, newBounds.getEast()],
         ],
-        { color: 'black', weight: 0.5 }
+        { color: 'black', weight: 0.2 }
       ).addTo(layersToDraw);
 
       const lon = newBounds.getWest() + i * (totalDeltaLon / numDivisions);
@@ -123,12 +123,11 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [newBounds.getSouth(), lon],
           [newBounds.getNorth(), lon],
         ],
-        { color: 'black', weight: 0.5 }
+        { color: 'black', weight: 0.2 }
       ).addTo(layersToDraw);
     }
 
     // Labels
-      // ====== LABEL DI DALAM TABEL ======
   const cellHeight = totalDeltaLat / numDivisions;
   const cellWidth = totalDeltaLon / numDivisions;
 
