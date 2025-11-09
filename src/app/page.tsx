@@ -24,7 +24,7 @@ import { Waypoints } from './components/Map';
 
 type WaypointType = 'start' | 'buoys' | 'finish' | 'image_surface' | 'image_underwater';
 
-// Helper builder (boleh di luar komponen)
+
 function buildWaypointMap(rows: Array<{
   mission_name: string;
   waypoint_type: WaypointType;
@@ -252,7 +252,9 @@ export default function HomePage() {
         if (waypoints.image_surface && isNear(currentPosition, waypoints.image_surface, tolerance)) {
           console.log('[NEAR] IMAGE_SURFACE');
           updateMissionStatusInSupabase('mission_buoys', 'selesai');
+          updateMissionStatusInSupabase('image_atas', 'proses');
         }
+
 
         if (waypoints.finish && isNear(currentPosition, waypoints.finish, tolerance) && ms?.image_bawah === 'selesai') {
           console.log('[NEAR] FINISH (image_bawah sudah selesai)');

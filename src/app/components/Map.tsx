@@ -39,7 +39,7 @@ interface MapProps {
 const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [5, 5], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
-const shipIcon = L.icon({ iconUrl: '/kapalasli.png', iconSize: [10, 20], iconAnchor: [5, 10] });
+const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [30, 30], iconAnchor: [15, 15] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
 
@@ -52,7 +52,7 @@ type MissionConfig = {
 
 const MISSION_CONFIG: Record<string, MissionConfig> = {
   lintasan1: {
-    center: [-7.769395998266628, 110.38289500996561],
+    center: [-7.765600212089049,  110.37047877704298],
     latLabels: ['1', '2', '3', '4', '5'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
@@ -114,7 +114,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [lat, newBounds.getWest()],
           [lat, newBounds.getEast()],
         ],
-        { color: 'black', weight: 0.2 }
+        { color: 'black', weight: 0.1 }
       ).addTo(layersToDraw);
 
       const lon = newBounds.getWest() + i * (totalDeltaLon / numDivisions);
@@ -123,7 +123,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
           [newBounds.getSouth(), lon],
           [newBounds.getNorth(), lon],
         ],
-        { color: 'black', weight: 0.2 }
+        { color: 'black', weight: 0.1 }
       ).addTo(layersToDraw);
     }
 
@@ -203,8 +203,8 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     mapRef.current = mapInstance;
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
-      maxZoom: 21.2,
-      minZoom: 21.2,
+      maxZoom: 21.8,
+      minZoom: 21.8,
     }).addTo(mapInstance);
 
     // Draw both grids once; show one at a time via view switcher
@@ -293,7 +293,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       pathRef.current = L.polyline(trackCoordinatesRef.current as [number, number][], {
         color: 'red',
         weight: 0.5,
-        dashArray: '2, 2',
+        dashArray: '2, 1',
       }).addTo(mapRef.current);
     }
   }, [navData, cogData]);
