@@ -7,7 +7,7 @@ import { isNear } from './components/Near';
 
 import NavData from './components/NavData';
 import MissionLog from './components/MissionLog';
-import ImageSection from './components/ImageSection';
+import ImageSection from './components/ImageSection2';
 import './styles.css'; // Menggunakan import CSS langsung
 
 const Map = dynamic(() => import('./components/Map'), { ssr: false });
@@ -225,7 +225,7 @@ export default function HomePage() {
 
         // ---- Evaluasi waypoint
         const currentPosition: [number, number] = [payload.new.latitude, payload.new.longitude];
-        const tolerance = 30; // meter (naikkan untuk simulasi)
+        const tolerance = 3; // meter (naikkan untuk simulasi)
 
         const map = mapStateRef.current;
         const ms = missionStatusRef.current;
@@ -240,18 +240,18 @@ export default function HomePage() {
         if (waypoints.start && isNear(currentPosition, waypoints.start, tolerance)) {
           console.log('[NEAR] START');
           updateMissionStatusInSupabase('mission_persiapan', 'selesai');
-          updateMissionStatusInSupabase('mission_start', 'proses');
-        }
-
-        if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
-          console.log('[NEAR] BUOYS');
           updateMissionStatusInSupabase('mission_start', 'selesai');
           updateMissionStatusInSupabase('mission_buoys', 'proses');
         }
 
-        if (waypoints.image_surface && isNear(currentPosition, waypoints.image_surface, tolerance)) {
-          console.log('[NEAR] IMAGE_SURFACE');
+        if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
+          console.log('[NEAR] BUOYS');
           updateMissionStatusInSupabase('mission_buoys', 'selesai');
+        }
+
+        if (waypoints.image_surface && isNear(currentPosition, waypoints.image_surface, tolerance) ) {
+          console.log('[NEAR] IMAGE_SURFACE');
+
           updateMissionStatusInSupabase('image_atas', 'proses');
         }
 

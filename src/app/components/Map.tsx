@@ -52,7 +52,10 @@ type MissionConfig = {
 
 const MISSION_CONFIG: Record<string, MissionConfig> = {
   lintasan1: {
-    center: [-7.765600212089049,  110.37047877704298],
+    // -7.765527144208408, 110.37035626576507 = bengkel
+    // -7.769460228520795, 110.38284391635815 = Wisdom
+    center: [-7.765527144208408, 110.37035626576507],
+    
     latLabels: ['1', '2', '3', '4', '5'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
@@ -192,7 +195,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const mapInstance = L.map('map', {
       center: initialCenter,
-      zoom: 23,
+      // zoom: 23,
       scrollWheelZoom: false,
       dragging: false,
       doubleClickZoom: false,
@@ -232,7 +235,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     });
   }, []);
 
-  /** ===================== RESPOND TO STATE CHANGES ===================== */
+  //RESPOND TO STATE CHANGES //
   useEffect(() => {
     if (!mapRef.current || !mapState) return;
 
