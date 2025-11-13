@@ -11,6 +11,8 @@ interface ImageSectionProps {
   missionImages: MissionImage[];
 }
 
+// BASE URL ke Flask di NUC, diambil dari .env
+// contoh di .env.local: NEXT_PUBLIC_MJPEG_BASE=http://192.168.1.10:5000
 const MJPEG_BASE = process.env.NEXT_PUBLIC_MJPEG_BASE || "";
 
 // Komponen untuk 1 kotak (atas / bawah)

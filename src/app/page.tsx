@@ -7,7 +7,7 @@ import { isNear } from './components/Near';
 
 import NavData from './components/NavData';
 import MissionLog from './components/MissionLog';
-import ImageSection from './components/ImageSection2';
+import ImageSection from './components/ImageSection';
 import './styles.css'; // Menggunakan import CSS langsung
 
 const Map = dynamic(() => import('./components/Map'), { ssr: false });
