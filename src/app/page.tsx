@@ -101,7 +101,7 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
   const [missionWaypoints, setMissionWaypoints] = useState<Record<string, Waypoints>>({});
-  const [controlsEnabled, setControlsEnabled] = useState<boolean>(false);
+  const [controlsEnabled, setControlsEnabled] = useState<boolean>(true);
 
   
   const missionWaypointsRef = useRef<Record<string, Waypoints>>({});

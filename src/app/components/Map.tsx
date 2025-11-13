@@ -36,8 +36,8 @@ interface MapProps {
 }
 
 /** ===================== ICONS ===================== */
-const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [5, 5], iconAnchor: [12, 12] });
-const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [5, 5], iconAnchor: [12, 12] });
+const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10,10], iconAnchor: [12, 12] });
+const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
 const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [30, 30], iconAnchor: [15, 15] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
@@ -164,11 +164,11 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       .addTo(waypointLayersRef.current)
       .bindPopup('Titik Start');
 
-    L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 0.4 })
+    L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 1 })
       .addTo(waypointLayersRef.current)
       .bindPopup('image surface');
 
-    L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 0.4 })
+    L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 1 })
       .addTo(waypointLayersRef.current)
       .bindPopup('image underwater');
 
