@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import L, { LayerGroup } from 'leaflet';
+import L, { LayerGroup, map } from 'leaflet';
 import 'leaflet-rotatedmarker';
 import 'leaflet/dist/leaflet.css';
 
@@ -39,7 +39,7 @@ interface MapProps {
 const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10,10], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
-const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [30, 30], iconAnchor: [15, 15] });
+const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [50, 40], iconAnchor: [25, 20] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
 
@@ -54,7 +54,7 @@ const MISSION_CONFIG: Record<string, MissionConfig> = {
   lintasan1: {
     // -7.765527144208408, 110.37035626576507 = bengkel
     // -7.769460228520795, 110.38284391635815 = Wisdom
-    center: [-7.765527144208408, 110.37035626576507],
+    center: [-7.769460228520795, 110.38284391635815],
     
     latLabels: ['1', '2', '3', '4', '5'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
@@ -195,13 +195,13 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const mapInstance = L.map('map', {
       center: initialCenter,
-      // zoom: 23,
+      // zoom: 21.8,
       scrollWheelZoom: false,
       dragging: false,
       doubleClickZoom: false,
-      boxZoom: false,
+      boxZoom: true,
       touchZoom: false,
-      zoomControl: false,
+      zoomControl: true,
     });
     mapRef.current = mapInstance;
 
