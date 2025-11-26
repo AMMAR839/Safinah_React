@@ -330,10 +330,20 @@ export default function HomePage() {
   return (
     <main className="main">
       <section className="gabungan">
-        <NavData data={navData} cogData={cogData} errorMessage={errorMessage} updateIntervalMs={updateIntervalMs} />
-        <MissionLog status={missionStatus} />
+        <div className="gabungan-scroll">
+          <NavData
+            data={navData}
+            cogData={cogData}
+            errorMessage={errorMessage}
+            updateIntervalMs={updateIntervalMs}
+          />
+          <MissionLog status={missionStatus} />
+        </div>
+
+        {/* ornamen tetap di bawah, nggak ikut scroll */}
         <img src="/ornamen.png" alt="hiasan" className="ornamen" />
       </section>
+
 
       <ImageSection missionImages={missionImages} />
 

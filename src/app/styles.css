@@ -51,13 +51,34 @@
   /* --- Gabungan (kiri: data navigasi + mission log) --- */
 
   .gabungan {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    overflow: auto;
-    border: 0.01px solid #039519;
-    position: relative;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 0.01px solid #039519;
+  position: relative;
+  overflow: hidden;         /* ⬅ container-nya sendiri tidak scroll */
+}
+  /* isi di dalam gabungan yang bisa di-scroll */
+.gabungan-scroll {
+  flex: 1;
+  overflow-y: auto;         /* ⬅️ scroll di sini */
+  padding: 6px;
+  padding-right: 10px;      /* ruang buat scrollbar */
+}
+
+/* optional: styling scrollbar biar lebih halus */
+.gabungan-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.gabungan-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+.gabungan-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+}
+
+
 
   .gabungan > * {
     position: relative;
