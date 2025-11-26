@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import L, { LayerGroup, map } from 'leaflet';
+import L, { LayerGroup } from 'leaflet';
 import 'leaflet-rotatedmarker';
 import 'leaflet/dist/leaflet.css';
 
@@ -36,13 +36,12 @@ interface MapProps {
 }
 
 /** ===================== ICONS ===================== */
-const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10,10], iconAnchor: [12, 12] });
+const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
 const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [50, 40], iconAnchor: [25, 20] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
-
 
 type MissionConfig = {
   center: [number, number];
@@ -55,7 +54,6 @@ const MISSION_CONFIG: Record<string, MissionConfig> = {
     // -7.765527144208408, 110.37035626576507 = bengkel
     // -7.769460228520795, 110.38284391635815 = Wisdom
     center: [-7.769460228520795, 110.38284391635815],
-    
     latLabels: ['1', '2', '3', '4', '5'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
@@ -98,6 +96,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       (gridLayersRef.current[missionType] = L.layerGroup());
 
     const numDivisions = 5;
+    // total 25m x 25m -> tiap cell 5m
     const { dLat, dLon } = metersToLatLon(center[0], 5);
     const totalDeltaLat = dLat * numDivisions;
     const totalDeltaLon = dLon * numDivisions;
@@ -130,29 +129,26 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       ).addTo(layersToDraw);
     }
 
-    // Labels
-  const cellHeight = totalDeltaLat / numDivisions;
-  const cellWidth = totalDeltaLon / numDivisions;
+    // Labels di tengah kotak
+    const cellHeight = totalDeltaLat / numDivisions;
+    const cellWidth = totalDeltaLon / numDivisions;
 
-  for (let row = 0; row < numDivisions; row++) {
-    for (let col = 0; col < numDivisions; col++) {
-      // titik tengah kotak (row, col)
-      const cellLatCenter = newBounds.getSouth() + (row + 0.5) * cellHeight;
-      const cellLonCenter = newBounds.getWest() + (col + 0.5) * cellWidth;
+    for (let row = 0; row < numDivisions; row++) {
+      for (let col = 0; col < numDivisions; col++) {
+        const cellLatCenter = newBounds.getSouth() + (row + 0.5) * cellHeight;
+        const cellLonCenter = newBounds.getWest() + (col + 0.5) * cellWidth;
 
-      // gabungan label
-      const label = `${lonLabels[col]}${latLabels[row]}`; 
+        const label = `${lonLabels[col]}${latLabels[row]}`;
 
-      L.marker([cellLatCenter, cellLonCenter], {
-        icon: L.divIcon({
-          className: 'gridCellLabel',
-          html: label,
-          iconAnchor: [10, 10],
-        }),
-        
-      }).addTo(layersToDraw);
-    }}
-
+        L.marker([cellLatCenter, cellLonCenter], {
+          icon: L.divIcon({
+            className: 'gridCellLabel',
+            html: label,
+            iconAnchor: [10, 10],
+          }),
+        }).addTo(layersToDraw);
+      }
+    }
   };
 
   const drawWaypoints = (mapInstance: L.Map, missionType: string) => {
@@ -183,7 +179,9 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     }
     buoys.forEach((buoy: { color: string; latitude: number; longitude: number }) => {
       const icon = buoy.color === 'red' ? redBuoyIcon : greenBuoyIcon;
-      L.marker([buoy.latitude, buoy.longitude], { icon }).addTo(mapInstance).bindPopup(`Pelampung ${buoy.color}`);
+      L.marker([buoy.latitude, buoy.longitude], { icon })
+        .addTo(mapInstance)
+        .bindPopup(`Pelampung ${buoy.color}`);
     });
   };
 
@@ -195,20 +193,23 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const mapInstance = L.map('map', {
       center: initialCenter,
-      // zoom: 21.8,
       scrollWheelZoom: false,
-      dragging: false,
+      dragging: true, // ✅ boleh digeser
       doubleClickZoom: false,
       boxZoom: true,
       touchZoom: false,
       zoomControl: true,
+      maxBoundsViscosity: 1.0, // ✅ “lengket” di batas 12.5m
     });
     mapRef.current = mapInstance;
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
-      maxZoom: 21.8,
-      minZoom: 21.8,
-    }).addTo(mapInstance);
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+      {
+        maxZoom: 21.8,
+        minZoom: 21.8,
+      }
+    ).addTo(mapInstance);
 
     // Draw both grids once; show one at a time via view switcher
     drawGrid(mapInstance, 'lintasan1');
@@ -216,10 +217,13 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     fetchBuoyData(mapInstance);
 
-    // Example rectangles around each mission center
+    // Example rectangles around each mission center (opsional, tetap pakai)
     const deltaLat = 0.1;
     const deltaLon = 0.1;
-    const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({ x: center[0], y: center[1] }));
+    const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({
+      x: center[0],
+      y: center[1],
+    }));
 
     centers.forEach(({ x, y }) => {
       const MaxgetBounds: L.LatLngBoundsExpression = [
@@ -235,24 +239,29 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     });
   }, []);
 
-  //RESPOND TO STATE CHANGES //
+  /** ===================== RESPOND TO STATE CHANGES ===================== */
   useEffect(() => {
     if (!mapRef.current || !mapState) return;
 
     const { center } = getConfig(mapState.view_type);
-    const { dLat, dLon } = metersToLatLon(center[0], 12.5);
+
+    // 25m x 25m -> 12.5m dari titik tengah ke tiap sisi
+    const HALF_SIZE_M = 12.5;
+    const { dLat, dLon } = metersToLatLon(center[0], HALF_SIZE_M);
 
     const bounds = L.latLngBounds(
       [center[0] - dLat, center[1] - dLon],
       [center[0] + dLat, center[1] + dLon]
     );
 
+    // batasi panning ke dalam kotak 25m x 25m
     mapRef.current.setMaxBounds(bounds);
     mapRef.current.fitBounds(bounds);
 
     // Toggle grid layers per view
     Object.values(gridLayersRef.current).forEach((lg) => lg.remove());
-    const activeGrid = gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];
+    const activeGrid =
+      gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];
     activeGrid.addTo(mapRef.current);
 
     drawWaypoints(mapRef.current, mapState.view_type);
@@ -301,7 +310,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     }
   }, [navData, cogData]);
 
-  return <div id="map" className="map"></div>;
+  return <div id="map" className="map" style={{ width: '100%', height: '100%' }} />;
 };
 
 export default Map;
