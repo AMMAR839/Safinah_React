@@ -101,7 +101,7 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
   const [missionWaypoints, setMissionWaypoints] = useState<Record<string, Waypoints>>({});
-  const [controlsEnabled, setControlsEnabled] = useState<boolean>(true);
+  const [controlsEnabled, setControlsEnabled] = useState<boolean>(false);
 
   
   const missionWaypointsRef = useRef<Record<string, Waypoints>>({});
@@ -356,7 +356,7 @@ export default function HomePage() {
             className={`tombolLintasan ${mapState.view_type === 'lintasan1' ? 'aktif' : ''}`}
             onClick={controlsEnabled ? () => handleSelectLintasan('lintasan1') : undefined}
           >
-            Lintasan 1
+            Lintasan A
           </button>
 
           <button
@@ -364,7 +364,7 @@ export default function HomePage() {
             className={`tombolLintasan ${mapState.view_type === 'lintasan2' ? 'aktif' : ''}`}
             onClick={controlsEnabled ? () => handleSelectLintasan('lintasan2') : undefined}
           >
-            Lintasan 2
+            Lintasan B
           </button>
 
           {controlsEnabled && (

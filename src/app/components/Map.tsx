@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import L, { LayerGroup } from 'leaflet';
 import 'leaflet-rotatedmarker';
+import 'leaflet-rotate';
 import 'leaflet/dist/leaflet.css';
 
 interface NavData {
@@ -40,8 +41,9 @@ const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10, 10], iconAnch
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
 const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [50, 40], iconAnchor: [25, 20] });
-const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [10, 10], iconAnchor: [12, 24] });
-const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [10, 10], iconAnchor: [12, 24] });
+const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [20, 20], iconAnchor: [12, 24] });
+const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [20, 20], iconAnchor: [12, 24] });
+// const finish = L.icon({ iconUrl: '/finish.jpg', iconSize: [40, 15], iconAnchor: [12, 24] });
 
 type MissionConfig = {
   center: [number, number];
@@ -53,20 +55,24 @@ const MISSION_CONFIG: Record<string, MissionConfig> = {
   lintasan1: {
     // -7.765527144208408, 110.37035626576507 = bengkel
     // -7.769460228520795, 110.38284391635815 = Wisdom
-    center: [-7.769460228520795, 110.38284391635815],
-    latLabels: ['1', '2', '3', '4', '5'],
+    //
+    center: [-7.9154834,112.5891244],
+    latLabels: ['5', '4', '3', '2', '1'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
   lintasan2: {
-    center: [-7.915044, 112.588824],
-    latLabels: ['A', 'B', 'C', 'D', 'E'],
-    lonLabels: ['1', '2', '3', '4', '5'],
+    center: [-7.9150524,112.5888965],
+    latLabels: ['5', '4', '3', '2', '1'],
+    lonLabels: ['E', 'D', 'C', 'B', 'A'],
   },
 };
 
 // Fallback ke lintasan1 jika tipe tak dikenal
 const getConfig = (missionType: string): MissionConfig =>
   MISSION_CONFIG[missionType] ?? MISSION_CONFIG['lintasan1'];
+
+// arah lintasan / grid (0 = utara, 90 = timur)
+const GRID_BEARING_DEG = 150; // samakan dengan arah lintasanmu
 
 /** ===================== COMPONENT ===================== */
 const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints, supabase }) => {
@@ -89,58 +95,81 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     };
   };
 
+  // offset dalam meter (dx timur, dy utara) → LatLng
+  const metersOffsetToLatLng = (
+    center: [number, number],
+    dxMeters: number,
+    dyMeters: number
+  ): L.LatLng => {
+    const [lat, lon] = center;
+    const metersPerDegLat = 111320;
+    const metersPerDegLon = 111320 * Math.cos((lat * Math.PI) / 180);
+
+    const dLat = dyMeters / metersPerDegLat;
+    const dLon = dxMeters / metersPerDegLon;
+
+    return L.latLng(lat + dLat, lon + dLon);
+  };
+
   const drawGrid = (mapInstance: L.Map, missionType: string) => {
     const { center, latLabels, lonLabels } = getConfig(missionType);
     const layersToDraw =
       gridLayersRef.current[missionType] ??
       (gridLayersRef.current[missionType] = L.layerGroup());
 
-    const numDivisions = 5;
-    // total 25m x 25m -> tiap cell 5m
-    const { dLat, dLon } = metersToLatLon(center[0], 5);
-    const totalDeltaLat = dLat * numDivisions;
-    const totalDeltaLon = dLon * numDivisions;
-
-    const newBounds = L.latLngBounds(
-      [center[0] - totalDeltaLat / 2, center[1] - totalDeltaLon / 2],
-      [center[0] + totalDeltaLat / 2, center[1] + totalDeltaLon / 2]
-    );
-
     layersToDraw.clearLayers();
 
-    // Grid lines
-    for (let i = 0; i <= numDivisions; i++) {
-      const lat = newBounds.getSouth() + i * (totalDeltaLat / numDivisions);
-      L.polyline(
-        [
-          [lat, newBounds.getWest()],
-          [lat, newBounds.getEast()],
-        ],
-        { color: 'black', weight: 0.1 }
-      ).addTo(layersToDraw);
+    const numDivisions = 5;
+    const cellSizeM = 5; // 5 m per cell
+    const totalSizeM = numDivisions * cellSizeM;
+    const halfSizeM = totalSizeM / 2;
 
-      const lon = newBounds.getWest() + i * (totalDeltaLon / numDivisions);
-      L.polyline(
-        [
-          [newBounds.getSouth(), lon],
-          [newBounds.getNorth(), lon],
-        ],
-        { color: 'black', weight: 0.1 }
-      ).addTo(layersToDraw);
+    // basis vector menurut bearing
+    const headingRad = (GRID_BEARING_DEG * Math.PI) / 180;
+    const sinH = Math.sin(headingRad);
+    const cosH = Math.cos(headingRad);
+
+    // u = arah heading (maju), v = kiri lintasan (heading - 90°)
+    const ux = sinH; // meter → timur
+    const uy = cosH; // meter → utara
+    const vx = -cosH;
+    const vy = sinH;
+
+    const toLatLng = (aMeters: number, bMeters: number) => {
+      // a sepanjang heading, b tegak lurus (kiri +)
+      const dx = aMeters * ux + bMeters * vx;
+      const dy = aMeters * uy + bMeters * vy;
+      return metersOffsetToLatLng(center, dx, dy);
+    };
+
+    // garis "horizontal" (sepanjang heading)
+    for (let row = 0; row <= numDivisions; row++) {
+      const b = -halfSizeM + row * cellSizeM;
+      const start = toLatLng(-halfSizeM, b);
+      const end = toLatLng(+halfSizeM, b);
+
+      L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
     }
 
-    // Labels di tengah kotak
-    const cellHeight = totalDeltaLat / numDivisions;
-    const cellWidth = totalDeltaLon / numDivisions;
+    // garis "vertikal" (tegak lurus heading)
+    for (let col = 0; col <= numDivisions; col++) {
+      const a = -halfSizeM + col * cellSizeM;
+      const start = toLatLng(a, -halfSizeM);
+      const end = toLatLng(a, +halfSizeM);
 
+      L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
+    }
+
+    // label di tengah kotak
     for (let row = 0; row < numDivisions; row++) {
+      const b = -halfSizeM + (row + 0.5) * cellSizeM;
       for (let col = 0; col < numDivisions; col++) {
-        const cellLatCenter = newBounds.getSouth() + (row + 0.5) * cellHeight;
-        const cellLonCenter = newBounds.getWest() + (col + 0.5) * cellWidth;
+        const a = -halfSizeM + (col + 0.5) * cellSizeM;
 
+        const cellCenter = toLatLng(a, b);
         const label = `${lonLabels[col]}${latLabels[row]}`;
 
-        L.marker([cellLatCenter, cellLonCenter], {
+        L.marker(cellCenter, {
           icon: L.divIcon({
             className: 'gridCellLabel',
             html: label,
@@ -168,6 +197,10 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       .addTo(waypointLayersRef.current)
       .bindPopup('image underwater');
 
+    // L.marker(waypoints.finish, { icon: finish, opacity: 1 })
+    //   .addTo(waypointLayersRef.current)
+    //   .bindPopup('Titik Finish');
+
     waypointLayersRef.current.addTo(mapInstance);
   };
 
@@ -191,15 +224,21 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const initialCenter = getConfig('lintasan1').center;
 
-    const mapInstance = L.map('map', {
+    const mapInstance = (L as any).map('map', {
       center: initialCenter,
+      zoom: 21,
       scrollWheelZoom: false,
-      dragging: true, // ✅ boleh digeser
+      dragging: true,
       doubleClickZoom: false,
       boxZoom: true,
       touchZoom: false,
       zoomControl: true,
-      maxBoundsViscosity: 1.0, // ✅ “lengket” di batas 12.5m
+      maxBoundsViscosity: 1.0,
+
+      // opsi dari leaflet-rotate
+      rotate: true,
+      bearing: 0,
+      touchRotate: false,
     });
     mapRef.current = mapInstance;
 
@@ -211,13 +250,17 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       }
     ).addTo(mapInstance);
 
-    // Draw both grids once; show one at a time via view switcher
+    // putar map sekali
+    const desiredBearing = 120; // derajat, searah jarum jam dari utara
+    (mapInstance as any).setBearing(desiredBearing);
+
+    // gambar grid untuk kedua lintasan (layerGroup-nya disiapkan)
     drawGrid(mapInstance, 'lintasan1');
     drawGrid(mapInstance, 'lintasan2');
 
     fetchBuoyData(mapInstance);
 
-    // Example rectangles around each mission center (opsional, tetap pakai)
+    // Example rectangles around each mission center (opsional)
     const deltaLat = 0.1;
     const deltaLon = 0.1;
     const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({
@@ -245,7 +288,6 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const { center } = getConfig(mapState.view_type);
 
-    // 25m x 25m -> 12.5m dari titik tengah ke tiap sisi
     const HALF_SIZE_M = 12.5;
     const { dLat, dLon } = metersToLatLon(center[0], HALF_SIZE_M);
 
@@ -254,11 +296,10 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       [center[0] + dLat, center[1] + dLon]
     );
 
-    // batasi panning ke dalam kotak 25m x 25m
     mapRef.current.setMaxBounds(bounds);
     mapRef.current.fitBounds(bounds);
 
-    // Toggle grid layers per view
+    // Toggle grid layers per view (layerGroup yang sudah diisi di drawGrid)
     Object.values(gridLayersRef.current).forEach((lg) => lg.remove());
     const activeGrid =
       gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];

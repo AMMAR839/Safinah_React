@@ -294,6 +294,7 @@
   /* ========== MISSION LOG / POSITION LOG ========== */
 
   .missionSection {
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
     gap: 6px;
