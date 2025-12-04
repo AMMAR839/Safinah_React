@@ -8,7 +8,7 @@ import { isNear } from './components/Near';
 import NavData from './components/NavData';
 import MissionLog from './components/MissionLog';
 import ImageSection from './components/ImageSection';
-import './styles.css'; // Menggunakan import CSS langsung
+import './styles.css';
 
 const Map = dynamic(() => import('./components/Map'), { ssr: false });
 
@@ -23,7 +23,6 @@ const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 import { Waypoints } from './components/Map';
 
 type WaypointType = 'start' | 'buoys' | 'finish' | 'image_surface' | 'image_underwater';
-
 
 function buildWaypointMap(rows: Array<{
   mission_name: string;
@@ -97,13 +96,15 @@ export default function HomePage() {
   const [cogData, setCogData] = useState<CogData | null>(null);
   const [missionImages, setMissionImages] = useState<MissionImage[]>([]);
   const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
-  const [mapState, setMapState] = useState<MapState>({ view_type: 'lintasan1', is_refreshed: false });
+  const [mapState, setMapState] = useState<MapState>({
+    view_type: 'lintasan1',
+    is_refreshed: false,
+  });
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
   const [missionWaypoints, setMissionWaypoints] = useState<Record<string, Waypoints>>({});
-  const [controlsEnabled, setControlsEnabled] = useState<boolean>(false);
+  const [controlsEnabled, setControlsEnabled] = useState<boolean>(true);
 
-  
   const missionWaypointsRef = useRef<Record<string, Waypoints>>({});
   const mapStateRef = useRef<MapState>(mapState);
   const missionStatusRef = useRef<MissionStatus | null>(missionStatus);
@@ -121,9 +122,16 @@ export default function HomePage() {
   const updateMissionStatusInSupabase = async (missionId: keyof MissionStatus, status: string) => {
     try {
       const updateData = { [missionId]: status };
-      const { data, error } = await supabase.from('data_mission').update(updateData).eq('id', 1).select();
+      const { data, error } = await supabase
+        .from('data_mission')
+        .update(updateData)
+        .eq('id', 1)
+        .select();
       if (error) {
-        console.error(`[updateMissionStatus] UPDATE gagal (cek RLS?) ${missionId} -> ${status}`, error);
+        console.error(
+          `[updateMissionStatus] UPDATE gagal (cek RLS?) ${missionId} -> ${status}`,
+          error
+        );
         return;
       }
       console.log(`[updateMissionStatus] OK ${missionId} -> ${status}`, data);
@@ -156,7 +164,9 @@ export default function HomePage() {
         if (cogError) throw cogError;
         setCogData(cog?.[0] || null);
 
-        const { data: images, error: imagesError } = await supabase.from('image_mission').select('*');
+        const { data: images, error: imagesError } = await supabase
+          .from('image_mission')
+          .select('*');
         if (imagesError) throw imagesError;
         setMissionImages(images || []);
 
@@ -168,7 +178,11 @@ export default function HomePage() {
         if (missionError) throw missionError;
         setMissionStatus(mission);
 
-        const { data: map, error: mapError } = await supabase.from('map_state').select('*').eq('id', 1).single();
+        const { data: map, error: mapError } = await supabase
+          .from('map_state')
+          .select('*')
+          .eq('id', 1)
+          .single();
         if (mapError) throw mapError;
         setMapState(map);
 
@@ -223,19 +237,20 @@ export default function HomePage() {
           return payload.new as NavData;
         });
 
-        // ---- Evaluasi waypoint
-        const currentPosition: [number, number] = [payload.new.latitude, payload.new.longitude];
-        const tolerance = 3; // meter (naikkan untuk simulasi)
+        const currentPosition: [number, number] = [
+          payload.new.latitude,
+          payload.new.longitude,
+        ];
+        const tolerance = 3;
 
         const map = mapStateRef.current;
         const ms = missionStatusRef.current;
         const wpAll = missionWaypointsRef.current;
         const waypoints = wpAll?.[map?.view_type];
 
-        // Debug bantuan
         console.log('[NAV] pos:', currentPosition, 'view:', map?.view_type, 'wp:', waypoints);
 
-        if (!waypoints) return; // belum ada data lintasan aktif
+        if (!waypoints) return;
 
         if (waypoints.start && isNear(currentPosition, waypoints.start, tolerance)) {
           console.log('[NEAR] START');
@@ -249,21 +264,25 @@ export default function HomePage() {
           updateMissionStatusInSupabase('mission_buoys', 'selesai');
         }
 
-        if (waypoints.image_surface && isNear(currentPosition, waypoints.image_surface, tolerance) ) {
+        if (
+          waypoints.image_surface &&
+          isNear(currentPosition, waypoints.image_surface, tolerance)
+        ) {
           console.log('[NEAR] IMAGE_SURFACE');
-
           updateMissionStatusInSupabase('image_atas', 'proses');
         }
 
-
-        if (waypoints.finish && isNear(currentPosition, waypoints.finish, tolerance) && ms?.image_bawah === 'selesai') {
+        if (
+          waypoints.finish &&
+          isNear(currentPosition, waypoints.finish, tolerance) &&
+          ms?.image_bawah === 'selesai'
+        ) {
           console.log('[NEAR] FINISH (image_bawah sudah selesai)');
           updateMissionStatusInSupabase('mission_finish', 'selesai');
         }
       })
       .subscribe();
 
-    // Realtime: lainnya
     const cogSubscription = supabase
       .channel('cog_data_changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cog_data' }, (payload) => {
@@ -293,7 +312,6 @@ export default function HomePage() {
       })
       .subscribe();
 
-    // Cleanup
     return () => {
       supabase.removeChannel(waypointsSub);
       supabase.removeChannel(navSubscription);
@@ -320,12 +338,52 @@ export default function HomePage() {
     setTimeout(() => setClicked(false), 300);
     resetMissionStatus();
     try {
-      const { error } = await supabase.from('map_state').update({ is_refreshed: true }).eq('id', 1);
+      const { error } = await supabase
+        .from('map_state')
+        .update({ is_refreshed: true })
+        .eq('id', 1);
       if (error) throw error;
     } catch (error: any) {
       console.error('Failed to trigger refresh:', error);
     }
   };
+
+  /** ===================== ⇩⇩ TAMBAHAN PENTING: SIMPAN WAYPOINT ⇩⇩ ===================== */
+  const waypointTypes: WaypointType[] = [
+    'start',
+    'buoys',
+    'finish',
+    'image_surface',
+    'image_underwater',
+  ];
+
+  const handleMissionWaypointsChange = async (
+    missionType: string,
+    newWaypoints: Waypoints
+  ) => {
+    // update state dulu
+    setMissionWaypoints((prev) => ({
+      ...prev,
+      [missionType]: newWaypoints,
+    }));
+
+    // siapkan rows untuk upsert
+    const rows = waypointTypes.map((wpType) => ({
+      mission_name: missionType,
+      waypoint_type: wpType,
+      latitude: newWaypoints[wpType][0],
+      longitude: newWaypoints[wpType][1],
+    }));
+
+    const { error } = await supabase
+      .from('mission_waypoints')
+      .upsert(rows, { onConflict: 'mission_name,waypoint_type' });
+
+    if (error) {
+      console.error('Gagal upsert mission_waypoints:', error);
+    }
+  };
+  /** ===================== ⇧⇧ TAMBAHAN PENTING: SIMPAN WAYPOINT ⇧⇧ ===================== */
 
   return (
     <main className="main">
@@ -340,35 +398,54 @@ export default function HomePage() {
           <MissionLog status={missionStatus} />
         </div>
 
-        {/* ornamen tetap di bawah, nggak ikut scroll */}
         <img src="/ornamen.png" alt="hiasan" className="ornamen" />
       </section>
-
 
       <ImageSection missionImages={missionImages} />
 
       <section className="mapSection">
         <h2>Lokasi Misi</h2>
-        <Map navData={navData} cogData={cogData} mapState={mapState} missionWaypoints={missionWaypoints} supabase={supabase} />
+
+        <Map
+          navData={navData}
+          cogData={cogData}
+          mapState={mapState}
+          missionWaypoints={missionWaypoints}
+          supabase={supabase}
+          onMissionWaypointsChange={handleMissionWaypointsChange}
+        />
+
         <div className={`mapControls ${!controlsEnabled ? 'no-refresh' : ''}`}>
           <button
             id="lintasan1"
-            className={`tombolLintasan ${mapState.view_type === 'lintasan1' ? 'aktif' : ''}`}
-            onClick={controlsEnabled ? () => handleSelectLintasan('lintasan1') : undefined}
+            className={`tombolLintasan ${
+              mapState.view_type === 'lintasan1' ? 'aktif' : ''
+            }`}
+            onClick={
+              controlsEnabled ? () => handleSelectLintasan('lintasan1') : undefined
+            }
           >
             Lintasan A
           </button>
 
           <button
             id="lintasan2"
-            className={`tombolLintasan ${mapState.view_type === 'lintasan2' ? 'aktif' : ''}`}
-            onClick={controlsEnabled ? () => handleSelectLintasan('lintasan2') : undefined}
+            className={`tombolLintasan ${
+              mapState.view_type === 'lintasan2' ? 'aktif' : ''
+            }`}
+            onClick={
+              controlsEnabled ? () => handleSelectLintasan('lintasan2') : undefined
+            }
           >
             Lintasan B
           </button>
 
           {controlsEnabled && (
-            <button id="tombol_refresh" className={`tombolRefresh ${clicked ? 'clicked' : ''}`} onClick={handleRefresh}>
+            <button
+              id="tombol_refresh"
+              className={`tombolRefresh ${clicked ? 'clicked' : ''}`}
+              onClick={handleRefresh}
+            >
               Refresh
             </button>
           )}

@@ -6,17 +6,17 @@ import 'leaflet-rotatedmarker';
 import 'leaflet-rotate';
 import 'leaflet/dist/leaflet.css';
 
-interface NavData {
+export interface NavData {
   latitude: number;
   longitude: number;
 }
 
-interface CogData {
+export interface CogData {
   cog: number;
 }
 
-interface MapState {
-  view_type: string;
+export interface MapState {
+  view_type: string; // 'lintasan1' | 'lintasan2'
   is_refreshed: boolean;
 }
 
@@ -34,16 +34,15 @@ interface MapProps {
   mapState: MapState;
   missionWaypoints: { [key: string]: Waypoints };
   supabase: any;
+  onMissionWaypointsChange?: (missionType: string, waypoints: Waypoints) => void;
 }
 
 /** ===================== ICONS ===================== */
 const redBuoyIcon = L.icon({ iconUrl: '/merah.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAnchor: [12, 12] });
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
-const shipIcon = L.icon({ iconUrl: '/kapalasli3.png', iconSize: [50, 40], iconAnchor: [25, 20] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [20, 20], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [20, 20], iconAnchor: [12, 24] });
-// const finish = L.icon({ iconUrl: '/finish.jpg', iconSize: [40, 15], iconAnchor: [12, 24] });
 
 type MissionConfig = {
   center: [number, number];
@@ -53,29 +52,53 @@ type MissionConfig = {
 
 const MISSION_CONFIG: Record<string, MissionConfig> = {
   lintasan1: {
-    // -7.765527144208408, 110.37035626576507 = bengkel
-    // -7.769460228520795, 110.38284391635815 = Wisdom
-    //
-    center: [-7.9154834,112.5891244],
+    center: [-7.9154834, 112.5891244],
     latLabels: ['5', '4', '3', '2', '1'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
   lintasan2: {
-    center: [-7.9150524,112.5888965],
+    center: [-7.9150524, 112.5888965],
     latLabels: ['5', '4', '3', '2', '1'],
     lonLabels: ['E', 'D', 'C', 'B', 'A'],
   },
 };
 
-// Fallback ke lintasan1 jika tipe tak dikenal
 const getConfig = (missionType: string): MissionConfig =>
   MISSION_CONFIG[missionType] ?? MISSION_CONFIG['lintasan1'];
 
-// arah lintasan / grid (0 = utara, 90 = timur)
-const GRID_BEARING_DEG = 150; // samakan dengan arah lintasanmu
+const GRID_BEARING_DEG = 150;
+const VIEW_HALF_SIZE_M = 12.5;
+const BOUNDS_HALF_SIZE_M = 15;
+
+/** helper: icon kapal ber-rotasi */
+const createShipIcon = (angleDeg: number): L.DivIcon =>
+  L.divIcon({
+    className: 'ship-icon-wrapper',
+    html: `
+      <img 
+        src="/kapalasli3.png" 
+        style="
+          width: 50px;
+          height: 40px;
+          transform: rotate(${angleDeg}deg);
+          transform-origin: center center;
+          display: block;
+        "
+      />
+    `,
+    iconSize: [50, 40],
+    iconAnchor: [25, 20],
+  });
 
 /** ===================== COMPONENT ===================== */
-const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints, supabase }) => {
+const Map: React.FC<MapProps> = ({
+  navData,
+  cogData,
+  mapState,
+  missionWaypoints,
+  supabase,
+  onMissionWaypointsChange,
+}) => {
   const mapRef = useRef<L.Map | null>(null);
   const shipMarkerRef = useRef<L.Marker | null>(null);
   const pathRef = useRef<L.Polyline | null>(null);
@@ -95,7 +118,6 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     };
   };
 
-  // offset dalam meter (dx timur, dy utara) → LatLng
   const metersOffsetToLatLng = (
     center: [number, number],
     dxMeters: number,
@@ -120,52 +142,43 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     layersToDraw.clearLayers();
 
     const numDivisions = 5;
-    const cellSizeM = 5; // 5 m per cell
+    const cellSizeM = 5;
     const totalSizeM = numDivisions * cellSizeM;
     const halfSizeM = totalSizeM / 2;
 
-    // basis vector menurut bearing
     const headingRad = (GRID_BEARING_DEG * Math.PI) / 180;
     const sinH = Math.sin(headingRad);
     const cosH = Math.cos(headingRad);
 
-    // u = arah heading (maju), v = kiri lintasan (heading - 90°)
-    const ux = sinH; // meter → timur
-    const uy = cosH; // meter → utara
+    const ux = sinH;
+    const uy = cosH;
     const vx = -cosH;
     const vy = sinH;
 
     const toLatLng = (aMeters: number, bMeters: number) => {
-      // a sepanjang heading, b tegak lurus (kiri +)
       const dx = aMeters * ux + bMeters * vx;
       const dy = aMeters * uy + bMeters * vy;
       return metersOffsetToLatLng(center, dx, dy);
     };
 
-    // garis "horizontal" (sepanjang heading)
     for (let row = 0; row <= numDivisions; row++) {
       const b = -halfSizeM + row * cellSizeM;
       const start = toLatLng(-halfSizeM, b);
       const end = toLatLng(+halfSizeM, b);
-
       L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
     }
 
-    // garis "vertikal" (tegak lurus heading)
     for (let col = 0; col <= numDivisions; col++) {
       const a = -halfSizeM + col * cellSizeM;
       const start = toLatLng(a, -halfSizeM);
       const end = toLatLng(a, +halfSizeM);
-
       L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
     }
 
-    // label di tengah kotak
     for (let row = 0; row < numDivisions; row++) {
       const b = -halfSizeM + (row + 0.5) * cellSizeM;
       for (let col = 0; col < numDivisions; col++) {
         const a = -halfSizeM + (col + 0.5) * cellSizeM;
-
         const cellCenter = toLatLng(a, b);
         const label = `${lonLabels[col]}${latLabels[row]}`;
 
@@ -175,6 +188,7 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
             html: label,
             iconAnchor: [10, 10],
           }),
+          interactive: false,
         }).addTo(layersToDraw);
       }
     }
@@ -185,21 +199,31 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
     const waypoints = missionWaypoints[missionType];
     if (!waypoints) return;
 
-    L.marker(waypoints.start, { icon: startIcon, opacity: 1 })
-      .addTo(waypointLayersRef.current)
-      .bindPopup('Titik Start');
+    const addDraggableMarker = (key: keyof Waypoints, icon: L.Icon, popupText: string) => {
+      const marker = L.marker(waypoints[key], {
+        icon,
+        opacity: key === 'buoys' ? 0.4 : 1,
+        draggable: true,
+      })
+        .addTo(waypointLayersRef.current)
+        .bindPopup(popupText);
 
-    L.marker(waypoints.image_surface, { icon: Object_surface, opacity: 1 })
-      .addTo(waypointLayersRef.current)
-      .bindPopup('image surface');
+      marker.on('dragend', (e) => {
+        const { lat, lng } = (e.target as L.Marker).getLatLng();
 
-    L.marker(waypoints.image_underwater, { icon: Object_under, opacity: 1 })
-      .addTo(waypointLayersRef.current)
-      .bindPopup('image underwater');
+        const newWaypoints: Waypoints = {
+          ...waypoints,
+          [key]: [lat, lng],
+        } as Waypoints;
 
-    // L.marker(waypoints.finish, { icon: finish, opacity: 1 })
-    //   .addTo(waypointLayersRef.current)
-    //   .bindPopup('Titik Finish');
+        onMissionWaypointsChange?.(missionType, newWaypoints);
+      });
+    };
+
+    addDraggableMarker('start', startIcon, 'Titik Start');
+    addDraggableMarker('buoys', redBuoyIcon, 'Target Buoy');
+    addDraggableMarker('image_surface', Object_surface, 'Image Surface');
+    addDraggableMarker('image_underwater', Object_under, 'Image Underwater');
 
     waypointLayersRef.current.addTo(mapInstance);
   };
@@ -210,32 +234,66 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       console.error('Failed to fetch buoy data:', error);
       return;
     }
-    buoys.forEach((buoy: { color: string; latitude: number; longitude: number }) => {
-      const icon = buoy.color === 'red' ? redBuoyIcon : greenBuoyIcon;
-      L.marker([buoy.latitude, buoy.longitude], { icon })
-        .addTo(mapInstance)
-        .bindPopup(`Pelampung ${buoy.color}`);
-    });
+
+    buoys.forEach(
+      (buoy: { id: number; color: string; latitude: number; longitude: number }) => {
+        const icon = buoy.color === 'red' ? redBuoyIcon : greenBuoyIcon;
+
+        const marker = L.marker([buoy.latitude, buoy.longitude], {
+          icon,
+          draggable: true,
+        })
+          .addTo(mapInstance)
+          .bindPopup(`Pelampung ${buoy.color}`);
+
+        marker.on('dragend', async () => {
+          const { lat, lng } = marker.getLatLng();
+
+          const { error: updateError } = await supabase
+            .from('buoys')
+            .update({
+              latitude: lat,
+              longitude: lng,
+            })
+            .eq('id', buoy.id);
+
+          if (updateError) {
+            console.error('Gagal update posisi buoy:', updateError);
+          }
+        });
+      }
+    );
   };
 
   /** ===================== INIT MAP ===================== */
   useEffect(() => {
     if (mapRef.current) return;
 
-    const initialCenter = getConfig('lintasan1').center;
+    const { center: initialCenter } = getConfig('lintasan1');
+
+    const viewDelta = metersToLatLon(initialCenter[0], VIEW_HALF_SIZE_M);
+    const viewBounds = L.latLngBounds(
+      [initialCenter[0] - viewDelta.dLat, initialCenter[1] - viewDelta.dLon],
+      [initialCenter[0] + viewDelta.dLat, initialCenter[1] + viewDelta.dLon]
+    );
+
+    const boundDelta = metersToLatLon(initialCenter[0], BOUNDS_HALF_SIZE_M);
+    const allowedBounds = L.latLngBounds(
+      [initialCenter[0] - boundDelta.dLat, initialCenter[1] - boundDelta.dLon],
+      [initialCenter[0] + boundDelta.dLat, initialCenter[1] + boundDelta.dLon]
+    );
 
     const mapInstance = (L as any).map('map', {
       center: initialCenter,
       zoom: 21,
       scrollWheelZoom: false,
-      dragging: true,
+      dragging: false,            // ⬅️ map TIDAK bisa di-drag sama sekali
       doubleClickZoom: false,
-      boxZoom: true,
+      boxZoom: false,
       touchZoom: false,
-      zoomControl: true,
+      zoomControl: false,
       maxBoundsViscosity: 1.0,
-
-      // opsi dari leaflet-rotate
+      maxBounds: allowedBounds,
       rotate: true,
       bearing: 0,
       touchRotate: false,
@@ -250,17 +308,16 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       }
     ).addTo(mapInstance);
 
-    // putar map sekali
-    const desiredBearing = 120; // derajat, searah jarum jam dari utara
+    const desiredBearing = 120;
     (mapInstance as any).setBearing(desiredBearing);
 
-    // gambar grid untuk kedua lintasan (layerGroup-nya disiapkan)
+    mapInstance.fitBounds(viewBounds);
+
     drawGrid(mapInstance, 'lintasan1');
     drawGrid(mapInstance, 'lintasan2');
 
     fetchBuoyData(mapInstance);
 
-    // Example rectangles around each mission center (opsional)
     const deltaLat = 0.1;
     const deltaLon = 0.1;
     const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({
@@ -288,18 +345,21 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
 
     const { center } = getConfig(mapState.view_type);
 
-    const HALF_SIZE_M = 12.5;
-    const { dLat, dLon } = metersToLatLon(center[0], HALF_SIZE_M);
-
-    const bounds = L.latLngBounds(
-      [center[0] - dLat, center[1] - dLon],
-      [center[0] + dLat, center[1] + dLon]
+    const viewDelta = metersToLatLon(center[0], VIEW_HALF_SIZE_M);
+    const viewBounds = L.latLngBounds(
+      [center[0] - viewDelta.dLat, center[1] - viewDelta.dLon],
+      [center[0] + viewDelta.dLat, center[1] + viewDelta.dLon]
     );
 
-    mapRef.current.setMaxBounds(bounds);
-    mapRef.current.fitBounds(bounds);
+    const boundDelta = metersToLatLon(center[0], BOUNDS_HALF_SIZE_M);
+    const allowedBounds = L.latLngBounds(
+      [center[0] - boundDelta.dLat, center[1] - boundDelta.dLon],
+      [center[0] + boundDelta.dLat, center[1] + boundDelta.dLon]
+    );
 
-    // Toggle grid layers per view (layerGroup yang sudah diisi di drawGrid)
+    mapRef.current.setMaxBounds(allowedBounds);
+    mapRef.current.fitBounds(viewBounds);
+
     Object.values(gridLayersRef.current).forEach((lg) => lg.remove());
     const activeGrid =
       gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];
@@ -318,23 +378,21 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
       }
       trackCoordinatesRef.current = [];
     }
-  }, [mapState]);
+  }, [mapState, missionWaypoints]);
 
-  /** ===================== NAV & COG ===================== */
+  /** ===================== NAV (POSISI KAPAL) ===================== */
   useEffect(() => {
     if (!mapRef.current || !navData) return;
 
     const latestPosition: [number, number] = [navData.latitude, navData.longitude];
 
     if (shipMarkerRef.current) {
-      (shipMarkerRef.current as any).setLatLng(latestPosition);
+      shipMarkerRef.current.setLatLng(latestPosition);
     } else {
-      shipMarkerRef.current = L.marker(latestPosition, { icon: shipIcon }).addTo(mapRef.current);
-      if (cogData) (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
-    }
-
-    if (cogData && shipMarkerRef.current) {
-      (shipMarkerRef.current as any).setRotationAngle(cogData.cog);
+      const initialAngle = cogData?.cog ?? 0;
+      shipMarkerRef.current = L.marker(latestPosition, {
+        icon: createShipIcon(initialAngle),
+      }).addTo(mapRef.current);
     }
 
     trackCoordinatesRef.current.push(latestPosition);
@@ -347,9 +405,15 @@ const Map: React.FC<MapProps> = ({ navData, cogData, mapState, missionWaypoints,
         color: 'red',
         weight: 0.5,
         dashArray: '2, 1',
-      }).addTo(mapRef.current);
+      }).addTo(mapRef.current!);
     }
   }, [navData, cogData]);
+
+  /** ===================== COG (ROTASI KAPAL) ===================== */
+  useEffect(() => {
+    if (!shipMarkerRef.current || !cogData) return;
+    shipMarkerRef.current.setIcon(createShipIcon(cogData.cog));
+  }, [cogData]);
 
   return <div id="map" className="map" style={{ width: '100%', height: '100%' }} />;
 };
