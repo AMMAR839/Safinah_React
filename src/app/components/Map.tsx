@@ -49,6 +49,7 @@ const greenBuoyIcon = L.icon({ iconUrl: '/hijau.png', iconSize: [10, 10], iconAn
 const startIcon = L.icon({ iconUrl: '/start.png', iconSize: [40, 40], iconAnchor: [12, 24] });
 const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [20, 20], iconAnchor: [12, 24] });
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [20, 20], iconAnchor: [12, 24] });
+const centerEditIcon = L.icon({iconUrl: '/ping.svg',  iconSize: [24, 24],iconAnchor: [12, 12]});
 
 type MissionConfig = {
   latLabels: string[];
@@ -477,6 +478,7 @@ const Map: React.FC<MapProps> = ({
       } else {
         centerEditMarkerRef.current = L.marker(baseLatLng, {
           draggable: true,
+          icon: centerEditIcon,
         })
           .addTo(mapRef.current)
           .bindPopup('Geser marker ini untuk mengubah titik center');

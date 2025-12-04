@@ -284,7 +284,7 @@ export default function HomePage() {
           payload.new.latitude,
           payload.new.longitude,
         ];
-        const tolerance = 0.5;
+        const tolerance = 1.5;
 
         const map = mapStateRef.current;
         const ms = missionStatusRef.current;
@@ -295,10 +295,12 @@ export default function HomePage() {
 
         if (!waypoints) return;
 
-        if (waypoints) {
-          updateMissionStatusInSupabase('mission_persiapan','persiapan');
+        if (ms?.mission_persiapan === 'belum') {
+          console.log('[NEAR] PERSIAPAN (auto proses)');
+          updateMissionStatusInSupabase('mission_persiapan', 'proses');
         }
-        
+
+
         if (waypoints.start && isNear(currentPosition, waypoints.start, tolerance)) {
           console.log('[NEAR] START');
           updateMissionStatusInSupabase('mission_persiapan', 'selesai');
@@ -306,7 +308,7 @@ export default function HomePage() {
           updateMissionStatusInSupabase('mission_buoys', 'proses');
         }
 
-        if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
+        else if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
           console.log('[NEAR] BUOYS');
           updateMissionStatusInSupabase('mission_buoys', 'selesai');
         }
