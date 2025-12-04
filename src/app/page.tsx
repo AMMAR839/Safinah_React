@@ -308,7 +308,7 @@ export default function HomePage() {
           updateMissionStatusInSupabase('mission_buoys', 'proses');
         }
 
-        else if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
+        if (waypoints.buoys && isNear(currentPosition, waypoints.buoys, tolerance)) {
           console.log('[NEAR] BUOYS');
           updateMissionStatusInSupabase('mission_buoys', 'selesai');
         }
