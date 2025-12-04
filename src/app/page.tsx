@@ -36,7 +36,7 @@ function buildWaypointMap(rows: Array<{
   }, {} as Record<string, Waypoints>);
 }
 
-interface NavData {
+interface NavDataType {
   latitude: number;
   longitude: number;
   timestamp: string;
@@ -66,6 +66,8 @@ interface MapState {
   is_refreshed: boolean;
 }
 
+type CenterMap = Record<string, [number, number]>;
+
 async function resetMissionStatus() {
   try {
     const { data, error } = await supabase
@@ -92,7 +94,7 @@ async function resetMissionStatus() {
 }
 
 export default function HomePage() {
-  const [navData, setNavData] = useState<NavData | null>(null);
+  const [navData, setNavData] = useState<NavDataType | null>(null);
   const [cogData, setCogData] = useState<CogData | null>(null);
   const [missionImages, setMissionImages] = useState<MissionImage[]>([]);
   const [missionStatus, setMissionStatus] = useState<MissionStatus | null>(null);
@@ -104,6 +106,11 @@ export default function HomePage() {
   const [updateIntervalMs, setUpdateIntervalMs] = useState<number | null>(null);
   const [missionWaypoints, setMissionWaypoints] = useState<Record<string, Waypoints>>({});
   const [controlsEnabled, setControlsEnabled] = useState<boolean>(true);
+
+  // center dari Supabase
+  const [centers, setCenters] = useState<CenterMap>({});
+  const [centerEditMode, setCenterEditMode] = useState<boolean>(false);
+  const [centerDraft, setCenterDraft] = useState<[number, number] | null>(null);
 
   const missionWaypointsRef = useRef<Record<string, Waypoints>>({});
   const mapStateRef = useRef<MapState>(mapState);
@@ -205,8 +212,44 @@ export default function HomePage() {
       }
     };
 
+    const fetchCenters = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('Center_Lintasan')
+          .select('"Lintasan", "Latitude", "Longititude"');
+
+        if (error) throw error;
+
+        const nextCenters: CenterMap = {};
+
+        if (data && data.length > 0) {
+          data.forEach((row: any) => {
+            const key = row.Lintasan as string; // contoh: 'lintasan1'
+            const lat = row.Latitude as number | null;
+            const lon = row.Longititude as number | null;
+            if (lat != null && lon != null) {
+              nextCenters[key] = [lat, lon];
+            }
+          });
+        }
+
+        // fallback kalau belum ada data sama sekali
+        if (!nextCenters['lintasan1']) {
+          nextCenters['lintasan1'] = [-7.9154834, 112.5891244];
+        }
+        if (!nextCenters['lintasan2']) {
+          nextCenters['lintasan2'] = [-7.9150524, 112.5888965];
+        }
+
+        setCenters(nextCenters);
+      } catch (err) {
+        console.error('Gagal memuat Center_Lintasan:', err);
+      }
+    };
+
     // Fetch awal
     fetchWaypoints();
+    fetchCenters();
     fetchInitialData();
 
     // Realtime: mission_waypoints
@@ -234,14 +277,14 @@ export default function HomePage() {
             const newTime = new Date(payload.new.timestamp).getTime();
             setUpdateIntervalMs(newTime - prevTime);
           }
-          return payload.new as NavData;
+          return payload.new as NavDataType;
         });
 
         const currentPosition: [number, number] = [
           payload.new.latitude,
           payload.new.longitude,
         ];
-        const tolerance = 3;
+        const tolerance = 0.5;
 
         const map = mapStateRef.current;
         const ms = missionStatusRef.current;
@@ -252,6 +295,10 @@ export default function HomePage() {
 
         if (!waypoints) return;
 
+        if (waypoints) {
+          updateMissionStatusInSupabase('mission_persiapan','persiapan');
+        }
+        
         if (waypoints.start && isNear(currentPosition, waypoints.start, tolerance)) {
           console.log('[NEAR] START');
           updateMissionStatusInSupabase('mission_persiapan', 'selesai');
@@ -348,7 +395,7 @@ export default function HomePage() {
     }
   };
 
-  /** ===================== ⇩⇩ TAMBAHAN PENTING: SIMPAN WAYPOINT ⇩⇩ ===================== */
+  /** ===================== SIMPAN WAYPOINT ===================== */
   const waypointTypes: WaypointType[] = [
     'start',
     'buoys',
@@ -383,7 +430,50 @@ export default function HomePage() {
       console.error('Gagal upsert mission_waypoints:', error);
     }
   };
-  /** ===================== ⇧⇧ TAMBAHAN PENTING: SIMPAN WAYPOINT ⇧⇧ ===================== */
+  /** ===================== END WAYPOINT ===================== */
+
+  const handleStartEditCenter = () => {
+    setCenterEditMode(true);
+    const currentCenter =
+      centers[mapState.view_type] ?? [-7.9154834, 112.5891244];
+    setCenterDraft([currentCenter[0], currentCenter[1]]);
+  };
+
+  const handleConfirmCenter = async () => {
+    if (!centerDraft) return;
+    const [lat, lon] = centerDraft;
+    const lintasan = mapState.view_type;
+
+    try {
+      const { error } = await supabase
+        .from('Center_Lintasan')
+        .upsert(
+          {
+            Lintasan: lintasan,
+            Latitude: lat,
+            Longititude: lon,
+          },
+          { onConflict: 'Lintasan' }
+        );
+
+      if (error) throw error;
+
+      setCenters((prev) => ({
+        ...prev,
+        [lintasan]: [lat, lon],
+      }));
+
+      setCenterEditMode(false);
+      setCenterDraft(null);
+    } catch (err) {
+      console.error('Gagal update Center_Lintasan:', err);
+    }
+  };
+
+  const handleCancelCenter = () => {
+    setCenterEditMode(false);
+    setCenterDraft(null);
+  };
 
   return (
     <main className="main">
@@ -404,7 +494,37 @@ export default function HomePage() {
       <ImageSection missionImages={missionImages} />
 
       <section className="mapSection">
-        <h2>Lokasi Misi</h2>
+        <div className="mapHeader">
+          <h2>Lokasi Misi</h2>
+
+          <div className="centerControls">
+            {!centerEditMode && (
+              <button
+                className="centerBtn"
+                onClick={handleStartEditCenter}
+              >
+                Ganti titik center
+              </button>
+            )}
+
+            {centerEditMode && (
+              <>
+                <button
+                  className="centerBtn centerBtn-confirm"
+                  onClick={handleConfirmCenter}
+                >
+                  Konfirmasi
+                </button>
+                <button
+                  className="centerBtn centerBtn-cancel"
+                  onClick={handleCancelCenter}
+                >
+                  Batal
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
         <Map
           navData={navData}
@@ -413,6 +533,10 @@ export default function HomePage() {
           missionWaypoints={missionWaypoints}
           supabase={supabase}
           onMissionWaypointsChange={handleMissionWaypointsChange}
+          centers={centers}
+          centerEditMode={centerEditMode}
+          centerDraft={centerDraft}
+          onCenterDraftChange={(lat, lng) => setCenterDraft([lat, lng])}
         />
 
         <div className={`mapControls ${!controlsEnabled ? 'no-refresh' : ''}`}>

@@ -35,6 +35,12 @@ interface MapProps {
   missionWaypoints: { [key: string]: Waypoints };
   supabase: any;
   onMissionWaypointsChange?: (missionType: string, waypoints: Waypoints) => void;
+
+  // center dari Supabase
+  centers: { [key: string]: [number, number] };
+  centerEditMode?: boolean;
+  centerDraft?: [number, number] | null;
+  onCenterDraftChange?: (lat: number, lng: number) => void;
 }
 
 /** ===================== ICONS ===================== */
@@ -45,26 +51,35 @@ const Object_surface = L.icon({ iconUrl: '/atas.jpeg', iconSize: [20, 20], iconA
 const Object_under = L.icon({ iconUrl: '/bawah.png', iconSize: [20, 20], iconAnchor: [12, 24] });
 
 type MissionConfig = {
-  center: [number, number];
   latLabels: string[];
   lonLabels: string[];
 };
 
-const MISSION_CONFIG: Record<string, MissionConfig> = {
+const MISSION_LABELS: Record<string, MissionConfig> = {
   lintasan1: {
-    center: [-7.9154834, 112.5891244],
     latLabels: ['5', '4', '3', '2', '1'],
     lonLabels: ['A', 'B', 'C', 'D', 'E'],
   },
   lintasan2: {
-    center: [-7.9150524, 112.5888965],
     latLabels: ['5', '4', '3', '2', '1'],
     lonLabels: ['E', 'D', 'C', 'B', 'A'],
   },
 };
 
-const getConfig = (missionType: string): MissionConfig =>
-  MISSION_CONFIG[missionType] ?? MISSION_CONFIG['lintasan1'];
+const getMissionConfig = (
+  missionType: string,
+  centers: { [key: string]: [number, number] }
+): { center: [number, number]; latLabels: string[]; lonLabels: string[] } => {
+  const labels = MISSION_LABELS[missionType] ?? MISSION_LABELS['lintasan1'];
+  const fallbackCenter: [number, number] = [-7.9154834, 112.5891244];
+  const center = centers[missionType] ?? fallbackCenter;
+
+  return {
+    center,
+    latLabels: labels.latLabels,
+    lonLabels: labels.lonLabels,
+  };
+};
 
 const GRID_BEARING_DEG = 150;
 const VIEW_HALF_SIZE_M = 12.5;
@@ -98,6 +113,10 @@ const Map: React.FC<MapProps> = ({
   missionWaypoints,
   supabase,
   onMissionWaypointsChange,
+  centers,
+  centerEditMode = false,
+  centerDraft = null,
+  onCenterDraftChange,
 }) => {
   const mapRef = useRef<L.Map | null>(null);
   const shipMarkerRef = useRef<L.Marker | null>(null);
@@ -108,6 +127,7 @@ const Map: React.FC<MapProps> = ({
     lintasan2: L.layerGroup(),
   });
   const waypointLayersRef = useRef<LayerGroup>(L.layerGroup());
+  const centerEditMarkerRef = useRef<L.Marker | null>(null);
 
   const metersToLatLon = (centerLat: number, meters: number): { dLat: number; dLon: number } => {
     const metersPerDegLat = 111320;
@@ -134,7 +154,7 @@ const Map: React.FC<MapProps> = ({
   };
 
   const drawGrid = (mapInstance: L.Map, missionType: string) => {
-    const { center, latLabels, lonLabels } = getConfig(missionType);
+    const { center, latLabels, lonLabels } = getMissionConfig(missionType, centers);
     const layersToDraw =
       gridLayersRef.current[missionType] ??
       (gridLayersRef.current[missionType] = L.layerGroup());
@@ -161,6 +181,7 @@ const Map: React.FC<MapProps> = ({
       return metersOffsetToLatLng(center, dx, dy);
     };
 
+    // garis horizontal
     for (let row = 0; row <= numDivisions; row++) {
       const b = -halfSizeM + row * cellSizeM;
       const start = toLatLng(-halfSizeM, b);
@@ -168,6 +189,7 @@ const Map: React.FC<MapProps> = ({
       L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
     }
 
+    // garis vertikal
     for (let col = 0; col <= numDivisions; col++) {
       const a = -halfSizeM + col * cellSizeM;
       const start = toLatLng(a, -halfSizeM);
@@ -175,6 +197,7 @@ const Map: React.FC<MapProps> = ({
       L.polyline([start, end], { color: 'black', weight: 0.1 }).addTo(layersToDraw);
     }
 
+    // label cell (A1, A2, dst)
     for (let row = 0; row < numDivisions; row++) {
       const b = -halfSizeM + (row + 0.5) * cellSizeM;
       for (let col = 0; col < numDivisions; col++) {
@@ -192,6 +215,8 @@ const Map: React.FC<MapProps> = ({
         }).addTo(layersToDraw);
       }
     }
+
+    // NOTE: layer group ditambah ke map di useEffect lain (bukan di sini)
   };
 
   const drawWaypoints = (mapInstance: L.Map, missionType: string) => {
@@ -269,7 +294,10 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (mapRef.current) return;
 
-    const { center: initialCenter } = getConfig('lintasan1');
+    const cfg = getMissionConfig('lintasan1', centers);
+    const initialCenter = cfg.center;
+
+    if (!initialCenter) return;
 
     const viewDelta = metersToLatLon(initialCenter[0], VIEW_HALF_SIZE_M);
     const viewBounds = L.latLngBounds(
@@ -287,7 +315,7 @@ const Map: React.FC<MapProps> = ({
       center: initialCenter,
       zoom: 21,
       scrollWheelZoom: false,
-      dragging: false,            // ⬅️ map TIDAK bisa di-drag sama sekali
+      dragging: false,
       doubleClickZoom: false,
       boxZoom: false,
       touchZoom: false,
@@ -313,6 +341,7 @@ const Map: React.FC<MapProps> = ({
 
     mapInstance.fitBounds(viewBounds);
 
+    // siapkan grid kedua lintasan (tapi belum ditambahkan ke map)
     drawGrid(mapInstance, 'lintasan1');
     drawGrid(mapInstance, 'lintasan2');
 
@@ -320,12 +349,13 @@ const Map: React.FC<MapProps> = ({
 
     const deltaLat = 0.1;
     const deltaLon = 0.1;
-    const centers = Object.values(MISSION_CONFIG).map(({ center }) => ({
-      x: center[0],
-      y: center[1],
-    }));
 
-    centers.forEach(({ x, y }) => {
+    const centersArr = Object.keys(MISSION_LABELS).map((k) => {
+      const cfgInner = getMissionConfig(k, centers);
+      return { x: cfgInner.center[0], y: cfgInner.center[1] };
+    });
+
+    centersArr.forEach(({ x, y }) => {
       const MaxgetBounds: L.LatLngBoundsExpression = [
         [x - (1 + deltaLat), y - (1 + deltaLon)],
         [x + 2 * deltaLat, y + 1 + deltaLon],
@@ -337,13 +367,13 @@ const Map: React.FC<MapProps> = ({
         fillOpacity: 1,
       }).addTo(mapInstance);
     });
-  }, []);
+  }, [centers]);
 
   /** ===================== RESPOND TO STATE CHANGES ===================== */
   useEffect(() => {
     if (!mapRef.current || !mapState) return;
 
-    const { center } = getConfig(mapState.view_type);
+    const { center } = getMissionConfig(mapState.view_type, centers);
 
     const viewDelta = metersToLatLon(center[0], VIEW_HALF_SIZE_M);
     const viewBounds = L.latLngBounds(
@@ -360,11 +390,15 @@ const Map: React.FC<MapProps> = ({
     mapRef.current.setMaxBounds(allowedBounds);
     mapRef.current.fitBounds(viewBounds);
 
+    // 🔹 Hapus semua grid dari map, lalu gambar ulang dengan center terbaru
     Object.values(gridLayersRef.current).forEach((lg) => lg.remove());
+    drawGrid(mapRef.current, mapState.view_type);
+
     const activeGrid =
       gridLayersRef.current[mapState.view_type] ?? gridLayersRef.current['lintasan1'];
     activeGrid.addTo(mapRef.current);
 
+    // Waypoints tetap digambar ulang juga
     drawWaypoints(mapRef.current, mapState.view_type);
 
     if (mapState.is_refreshed) {
@@ -378,7 +412,7 @@ const Map: React.FC<MapProps> = ({
       }
       trackCoordinatesRef.current = [];
     }
-  }, [mapState, missionWaypoints]);
+  }, [mapState, missionWaypoints, centers]);
 
   /** ===================== NAV (POSISI KAPAL) ===================== */
   useEffect(() => {
@@ -414,6 +448,51 @@ const Map: React.FC<MapProps> = ({
     if (!shipMarkerRef.current || !cogData) return;
     shipMarkerRef.current.setIcon(createShipIcon(cogData.cog));
   }, [cogData]);
+
+  /** ===================== CENTER EDIT MODE (DRAG MAP & MARKER) ===================== */
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (centerEditMode) {
+      mapRef.current.dragging.enable();
+      mapRef.current.touchZoom.enable();
+    } else {
+      mapRef.current.dragging.disable();
+      mapRef.current.touchZoom.disable();
+    }
+  }, [centerEditMode]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const { center } = getMissionConfig(mapState.view_type, centers);
+
+    if (centerEditMode) {
+      const baseLatLng = centerDraft
+        ? L.latLng(centerDraft[0], centerDraft[1])
+        : L.latLng(center[0], center[1]);
+
+      if (centerEditMarkerRef.current) {
+        centerEditMarkerRef.current.setLatLng(baseLatLng);
+      } else {
+        centerEditMarkerRef.current = L.marker(baseLatLng, {
+          draggable: true,
+        })
+          .addTo(mapRef.current)
+          .bindPopup('Geser marker ini untuk mengubah titik center');
+
+        centerEditMarkerRef.current.on('dragend', (e) => {
+          const { lat, lng } = (e.target as L.Marker).getLatLng();
+          onCenterDraftChange?.(lat, lng);
+        });
+      }
+    } else {
+      if (centerEditMarkerRef.current) {
+        mapRef.current.removeLayer(centerEditMarkerRef.current);
+        centerEditMarkerRef.current = null;
+      }
+    }
+  }, [centerEditMode, centerDraft, mapState.view_type, centers, onCenterDraftChange]);
 
   return <div id="map" className="map" style={{ width: '100%', height: '100%' }} />;
 };
